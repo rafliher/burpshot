@@ -50,67 +50,201 @@ def parse_raw_request(raw: str):
     return method, path, headers, body
 
 
-def send_http_request(host: str, raw_request: str) -> dict:
-    method, path, headers, body = parse_raw_request(raw_request)
+def _resolve_target(host: str, path: str):
+    """Figure out where to connect for the *initial* request.
 
-    parsed_host = urllib.parse.urlparse(host)
-    is_https = parsed_host.scheme == 'https'
-    hostname = parsed_host.hostname
-    port = parsed_host.port or (443 if is_https else 80)
+    Mirrors Burp: always connect to the -t target host; if the request line
+    carries an absolute URL, only its path/query is used. Returns the
+    connection parts plus an absolute URL (used to resolve later redirects)
+    and the Host header value.
+    """
+    ph = urllib.parse.urlparse(host)
+    scheme = ph.scheme or 'https'
+    hostname = ph.hostname
+    port = ph.port or (443 if scheme == 'https' else 80)
 
-    # Strip accept-encoding so we always get plain text back
-    headers.pop('accept-encoding', None)
-    headers['host'] = hostname + (f':{port}' if parsed_host.port else '')
+    if path.startswith(('http://', 'https://')):
+        pp = urllib.parse.urlparse(path)
+        full_path = (pp.path or '/') + (f'?{pp.query}' if pp.query else '')
+    else:
+        full_path = path if path.startswith('/') else '/' + path
 
-    if is_https:
+    host_header = hostname + (f':{port}' if ph.port else '')
+    abs_url = f'{scheme}://{host_header}{full_path}'
+    return scheme, hostname, port, full_path, abs_url, host_header
+
+
+def _host_header(hostname: str, port: int, scheme: str) -> str:
+    default = 443 if scheme == 'https' else 80
+    return hostname + (f':{port}' if port != default else '')
+
+
+def _title_header(k: str) -> str:
+    return '-'.join(w.capitalize() for w in k.split('-'))
+
+
+def _merge_cookies(existing: str, set_cookies: list) -> str:
+    """Fold response Set-Cookie values into the request Cookie header."""
+    jar: dict[str, str] = {}
+    for part in existing.split(';'):
+        part = part.strip()
+        if '=' in part:
+            k, v = part.split('=', 1)
+            jar[k.strip()] = v.strip()
+    for sc in set_cookies:
+        first = sc.split(';', 1)[0].strip()
+        if '=' in first:
+            k, v = first.split('=', 1)
+            jar[k.strip()] = v.strip()
+    return '; '.join(f'{k}={v}' for k, v in jar.items())
+
+
+def _build_request_text(method: str, full_path: str, headers: dict, body: str) -> str:
+    lines = [f'{method} {full_path} HTTP/1.1']
+    order = (['host'] if 'host' in headers else []) + [k for k in headers if k != 'host']
+    for k in order:
+        lines.append(f'{_title_header(k)}: {headers[k]}')
+    text = '\n'.join(lines) + '\n'
+    if body:
+        text += '\n' + body
+    return text
+
+
+def _open_conn(scheme: str, hostname: str, port: int):
+    if scheme == 'https':
         ctx = ssl.create_default_context()
         ctx.check_hostname = False
         ctx.verify_mode = ssl.CERT_NONE
-        conn = http.client.HTTPSConnection(hostname, port, context=ctx, timeout=30)
-    else:
-        conn = http.client.HTTPConnection(hostname, port, timeout=30)
+        return http.client.HTTPSConnection(hostname, port, context=ctx, timeout=30)
+    return http.client.HTTPConnection(hostname, port, timeout=30)
 
-    # Resolve full path
-    if path.startswith('http://') or path.startswith('https://'):
-        p = urllib.parse.urlparse(path)
-        full_path = (p.path or '/') + (f'?{p.query}' if p.query else '')
-    else:
-        full_path = path
 
+def _send_single(scheme, hostname, port, method, full_path, headers, body) -> dict:
+    conn = _open_conn(scheme, hostname, port)
     t0 = time.time()
-    conn.request(method, full_path, body=body.encode() if body else None, headers=headers)
-    resp = conn.getresponse()
-    raw_body = resp.read()
-    elapsed_ms = int((time.time() - t0) * 1000)
-
-    # Decompress
-    ce = (resp.getheader('content-encoding') or '').lower().strip()
     try:
-        if ce == 'gzip':
-            raw_body = gzip.decompress(raw_body)
-        elif ce == 'deflate':
-            raw_body = zlib.decompress(raw_body)
-    except Exception:
-        pass
+        conn.request(method, full_path, body=body.encode() if body else None, headers=headers)
+        resp = conn.getresponse()
+        raw_body = resp.read()
+        elapsed_ms = int((time.time() - t0) * 1000)
 
-    body_str = raw_body.decode('utf-8', errors='replace')
-    resp_headers = dict(resp.getheaders())
+        ce = (resp.getheader('content-encoding') or '').lower().strip()
+        try:
+            if ce == 'gzip':
+                raw_body = gzip.decompress(raw_body)
+            elif ce == 'deflate':
+                raw_body = zlib.decompress(raw_body)
+        except Exception:
+            pass
 
-    header_lines = [f'HTTP/1.1 {resp.status} {resp.reason}']
-    for k, v in resp.getheaders():
-        header_lines.append(f'{k}: {v}')
-    raw_response = '\n'.join(header_lines) + '\n\n' + body_str
+        body_str = raw_body.decode('utf-8', errors='replace')
+        resp_headers = dict(resp.getheaders())
+        set_cookies = resp.msg.get_all('Set-Cookie') or []
+
+        header_lines = [f'HTTP/1.1 {resp.status} {resp.reason}']
+        for k, v in resp.getheaders():
+            header_lines.append(f'{k}: {v}')
+        raw_response = '\n'.join(header_lines) + '\n\n' + body_str
+
+        return {
+            'status_code': resp.status,
+            'status_message': resp.reason,
+            'headers': resp_headers,
+            'set_cookies': set_cookies,
+            'body': body_str,
+            'raw_response': raw_response,
+            'bytes': len(raw_body),
+            'millis': elapsed_ms,
+            'redirect_url': resp.getheader('location'),
+        }
+    finally:
+        conn.close()
+
+
+def _build_next(cur: dict, resp: dict, location: str) -> dict:
+    """Build the next hop's request from a 3xx response's Location header."""
+    new_abs = urllib.parse.urljoin(cur['abs_url'], location)
+    p = urllib.parse.urlparse(new_abs)
+    scheme = p.scheme or cur['scheme']
+    hostname = p.hostname or cur['hostname']
+    port = p.port or (443 if scheme == 'https' else 80)
+    full_path = (p.path or '/') + (f'?{p.query}' if p.query else '')
+
+    sc = resp['status_code']
+    # 307/308 preserve method & body; everything else becomes a bodyless GET
+    if sc in (307, 308):
+        method, body = cur['method'], cur['body']
+    else:
+        method = 'HEAD' if cur['method'] == 'HEAD' else 'GET'
+        body = ''
+
+    old = cur['headers']
+    new_headers: dict[str, str] = {'host': _host_header(hostname, port, scheme)}
+    for k in ('user-agent', 'accept', 'accept-language'):
+        if k in old:
+            new_headers[k] = old[k]
+
+    cookie = _merge_cookies(old.get('cookie', ''), resp.get('set_cookies', []))
+    if cookie:
+        new_headers['cookie'] = cookie
+
+    if body:
+        new_headers['content-length'] = str(len(body.encode()))
+        if 'content-type' in old:
+            new_headers['content-type'] = old['content-type']
 
     return {
-        'status_code': resp.status,
-        'status_message': resp.reason,
-        'headers': resp_headers,
-        'body': body_str,
-        'raw_response': raw_response,
-        'bytes': len(raw_body),
-        'millis': elapsed_ms,
-        'redirect_url': resp.getheader('location'),
+        'method': method, 'headers': new_headers, 'body': body,
+        'scheme': scheme, 'hostname': hostname, 'port': port,
+        'full_path': full_path, 'abs_url': new_abs,
+        'request_text': _build_request_text(method, full_path, new_headers, body),
     }
+
+
+def send_http_request(host: str, raw_request: str,
+                      follow: bool = False, max_redirects: int = 10) -> dict:
+    method, path, headers, body = parse_raw_request(raw_request)
+
+    # Strip accept-encoding so we always get plain text back
+    headers.pop('accept-encoding', None)
+
+    scheme, hostname, port, full_path, abs_url, host_header = _resolve_target(host, path)
+    headers['host'] = host_header
+
+    cur = {
+        'method': method, 'headers': headers, 'body': body,
+        'scheme': scheme, 'hostname': hostname, 'port': port,
+        'full_path': full_path, 'abs_url': abs_url,
+        'request_text': raw_request,
+    }
+
+    chain = []
+    total_ms = 0
+    hops = 0
+    while True:
+        resp = _send_single(cur['scheme'], cur['hostname'], cur['port'],
+                            cur['method'], cur['full_path'], cur['headers'], cur['body'])
+        total_ms += resp['millis']
+        resp['request_text'] = cur['request_text']
+        resp['request_url'] = cur['abs_url']
+        chain.append(resp)
+
+        sc = resp['status_code']
+        loc = resp['redirect_url']
+        if not (follow and 300 <= sc < 400 and loc and hops < max_redirects):
+            break
+        hops += 1
+        cur = _build_next(cur, resp, loc)
+
+    final = chain[-1]
+    final['hops'] = hops
+    final['total_millis'] = total_ms
+    final['redirects'] = [
+        {'status_code': r['status_code'], 'url': r['request_url'],
+         'location': r['redirect_url']}
+        for r in chain
+    ]
+    return final
 
 
 # ─── Syntax highlighting (Python → HTML spans) ─────────────────────────────────
@@ -527,6 +661,10 @@ def main():
                         help='Target base URL, e.g. https://example.com')
     parser.add_argument('-o', '--output',
                         help='Output PNG path (default: screenshots/burpshot-<ts>.png)')
+    parser.add_argument('-L', '--follow', action='store_true',
+                        help='Follow 3xx redirects (301/302/303 become GET, 307/308 keep method+body)')
+    parser.add_argument('--max-redirects', type=int, default=10, metavar='N',
+                        help='Max redirects to follow with -L (default: 10)')
     parser.add_argument('--print-only', action='store_true',
                         help='Print raw response to stdout, skip screenshot')
     parser.add_argument('--json', action='store_true',
@@ -550,14 +688,30 @@ def main():
     # ── send ──────────────────────────────────────────────────────────────────
     print(f'[*] {raw.splitlines()[0]}  →  {args.target}', file=sys.stderr)
     try:
-        resp = send_http_request(args.target, raw)
+        resp = send_http_request(args.target, raw,
+                                 follow=args.follow, max_redirects=args.max_redirects)
     except Exception as exc:
         sys.exit(f'[!] Request failed: {exc}')
+
+    # Log the redirect chain when following
+    if args.follow and resp.get('hops'):
+        for hop in resp['redirects']:
+            arrow = f'  →  {hop["location"]}' if hop['location'] else ''
+            print(f'[→] {hop["status_code"]} {hop["url"]}{arrow}', file=sys.stderr)
+        if resp['hops'] >= args.max_redirects and resp['redirect_url']:
+            print(f'[!] Stopped after {args.max_redirects} redirects (--max-redirects)',
+                  file=sys.stderr)
 
     status_line = f'{resp["status_code"]} {resp["status_message"]}'
     size_line   = (f'{resp["bytes"]} B' if resp["bytes"] < 1024
                    else f'{resp["bytes"]/1024:.1f} KB')
-    print(f'[+] {status_line}  —  {size_line}  in {resp["millis"]} ms', file=sys.stderr)
+    time_line   = (f'{resp["total_millis"]} ms over {resp["hops"]+1} hops'
+                   if args.follow and resp.get('hops')
+                   else f'{resp["millis"]} ms')
+    print(f'[+] {status_line}  —  {size_line}  in {time_line}', file=sys.stderr)
+
+    # When following, the screenshot/response reflects the final hop's request
+    display_request = resp.get('request_text', raw)
 
     # ── output modes ──────────────────────────────────────────────────────────
     if args.print_only:
@@ -565,7 +719,7 @@ def main():
         return
 
     if args.json:
-        print(_json.dumps({
+        out_json = {
             'status_code':    resp['status_code'],
             'status_message': resp['status_message'],
             'headers':        resp['headers'],
@@ -573,11 +727,16 @@ def main():
             'bytes':          resp['bytes'],
             'millis':         resp['millis'],
             'redirect_url':   resp['redirect_url'],
-        }, ensure_ascii=False))
+        }
+        if args.follow:
+            out_json['hops'] = resp['hops']
+            out_json['total_millis'] = resp['total_millis']
+            out_json['redirects'] = resp['redirects']
+        print(_json.dumps(out_json, ensure_ascii=False))
         return
 
     # ── screenshot ────────────────────────────────────────────────────────────
-    html = generate_html(raw, resp, args.target)
+    html = generate_html(display_request, resp, args.target)
 
     if args.output:
         out = args.output

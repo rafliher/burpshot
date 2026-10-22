@@ -74,12 +74,15 @@ Cookie: session=abc123
 
 ```
 usage: burpshot [-h] [-r REQUEST] -t TARGET [-o OUTPUT]
+                [-L] [--max-redirects N]
                 [--print-only] [--json] [--no-screenshot]
 
 arguments:
   -r, --request FILE    File raw HTTP request (default: stdin)
   -t, --target URL      Target base URL, contoh: https://example.com
   -o, --output FILE     Path output PNG (default: screenshots/burpshot-<ts>.png)
+  -L, --follow          Follow 3xx redirect (301/302/303 → GET, 307/308 tetap method+body)
+  --max-redirects N     Maksimal redirect yang diikuti dengan -L (default: 10)
   --print-only          Print raw response ke stdout, skip screenshot
   --json                Output JSON ke stdout (untuk di-parse agen lain)
   --no-screenshot       Simpan HTML saja, tanpa headless browser
@@ -107,6 +110,26 @@ python burpshot.py -r request.txt -t https://example.com -o hasil/login-test.png
 python burpshot.py -r request.txt -t https://target.com --print-only
 ```
 
+**Follow redirect (ikuti 3xx sampai response final):**
+```bash
+python burpshot.py -r request.txt -t https://target.com -L
+```
+
+Progress ke stderr menampilkan seluruh rantai redirect:
+```
+[*] POST /login HTTP/1.1  →  https://target.com
+[→] 302 https://target.com/login  →  /dashboard
+[→] 200 https://target.com/dashboard
+[+] 200 OK  —  4.2 KB  in 512 ms over 2 hops
+```
+
+Perilaku redirect (mengikuti konvensi HTTP):
+- **301 / 302 / 303** → request berikutnya jadi `GET` dan body dibuang
+- **307 / 308** → method dan body dipertahankan
+- **Cookie** dari `Set-Cookie` otomatis dibawa ke hop berikutnya (penting untuk login flow)
+- `User-Agent`, `Accept`, `Accept-Language` dibawa; Host diupdate per hop
+- Screenshot/response menampilkan **request & response final** setelah semua redirect
+
 **Output JSON untuk diproses agen/script lain:**
 ```bash
 python burpshot.py -r request.txt -t https://target.com --json
@@ -125,6 +148,20 @@ Output JSON:
   "bytes": 312,
   "millis": 180,
   "redirect_url": null
+}
+```
+
+Dengan `-L --json`, JSON mendapat field tambahan `hops`, `total_millis`, dan `redirects` (rantai lengkap):
+```json
+{
+  "status_code": 200,
+  "...": "...",
+  "hops": 2,
+  "total_millis": 512,
+  "redirects": [
+    { "status_code": 302, "url": "https://target.com/login", "location": "/dashboard" },
+    { "status_code": 200, "url": "https://target.com/dashboard", "location": null }
+  ]
 }
 ```
 
