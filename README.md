@@ -172,6 +172,8 @@ Buka `http://localhost:3000` di browser.
 
 ### Fitur
 
+**Repeater (`/`)**
+
 | Fitur | Detail |
 |---|---|
 | Request editor | Textarea editable dengan line numbers |
@@ -184,11 +186,33 @@ Buka `http://localhost:3000` di browser.
 | Screenshot (tombol SS) | Simpan tampilan ke `screenshots/burpshot-<ts>.png` |
 | Status bar | Tampilkan `Done \| 577 B \| 1623 ms` |
 
+**Intruder Positions (`/intruder-positions`)**
+
+| Fitur | Detail |
+|---|---|
+| §-marker editor | Tambah, hapus, auto-detect payload positions |
+| Add § / Clear § / Auto § | Wrap selection, strip all, atau auto-mark form values |
+| Payload list | Tambah/hapus/paste/load payloads dari file |
+| Attack type | Sniper, Battering ram, Pitchfork, Cluster bomb |
+| Start attack | Navigasi ke halaman Intruder Attack |
+
+**Intruder Attack (`/intruder-attack`)**
+
+| Fitur | Detail |
+|---|---|
+| Results table | 20 baris sample, klik baris untuk lihat request/response |
+| Column sort | Klik header kolom untuk sort ascending/descending |
+| Layout toggle | Side-by-side / Stacked / Single-response pane |
+| Inspector panel | Collapse/expand sections, update per-row |
+| Resizable dividers | Drag untuk resize table height dan req/resp split |
+
 ### Endpoint server
 
 | Method | Path | Fungsi |
 |---|---|---|
-| `GET` | `/` | Serve web UI |
+| `GET` | `/` | Serve Repeater UI |
+| `GET` | `/intruder-positions` | Serve Intruder Positions UI |
+| `GET` | `/intruder-attack` | Serve Intruder Attack results UI |
 | `POST` | `/send` | Proxy raw HTTP request ke target |
 | `POST` | `/save-screenshot` | Terima PNG base64 dari browser, simpan ke disk |
 
@@ -218,15 +242,13 @@ Buka `http://localhost:3000` di browser.
 
 ```
 burpshot/
-├── burpshot.py       # CLI tool (Python, standalone)
-├── server.js         # Web server (Node.js)
-├── index.html        # Web UI (Burp Repeater clone)
-├── screenshots/      # Output PNG tersimpan di sini
-└── design_ref/       # File desain referensi asli
-    ├── Burp Repeater.dc.html
-    ├── Burp Intruder Attack.dc.html
-    ├── Burp Intruder Positions.dc.html
-    └── support.js
+├── burpshot.py              # CLI tool (Python, standalone)
+├── server.js                # Web server (Node.js)
+├── index.html               # Web UI: Burp Repeater clone
+├── intruder-positions.html  # Web UI: Burp Intruder Positions clone
+├── intruder-attack.html     # Web UI: Burp Intruder Attack results clone
+├── screenshots/             # Output PNG tersimpan di sini
+└── design_ref/              # File desain referensi asli (tidak dicommit)
 ```
 
 ---

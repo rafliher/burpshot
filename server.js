@@ -122,13 +122,22 @@ const srv = http.createServer(async (req, res) => {
 
   const urlPath = req.url.split('?')[0];
 
-  if (req.method === 'GET' && (urlPath === '/' || urlPath === '/index.html')) {
+  const pageRoutes = {
+    '/': 'index.html',
+    '/index.html': 'index.html',
+    '/intruder-positions': 'intruder-positions.html',
+    '/intruder-positions.html': 'intruder-positions.html',
+    '/intruder-attack': 'intruder-attack.html',
+    '/intruder-attack.html': 'intruder-attack.html',
+  };
+
+  if (req.method === 'GET' && pageRoutes[urlPath]) {
     try {
-      const html = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf-8');
+      const html = fs.readFileSync(path.join(__dirname, pageRoutes[urlPath]), 'utf-8');
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
       res.writeHead(200);
       res.end(html);
-    } catch (e) { res.writeHead(500); res.end('Error loading index.html: ' + e.message); }
+    } catch (e) { res.writeHead(500); res.end('Error loading ' + pageRoutes[urlPath] + ': ' + e.message); }
     return;
   }
 

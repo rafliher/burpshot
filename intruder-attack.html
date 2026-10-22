@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>3. Intruder attack of https://test-sisko.bp2mi.go.id</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg-darkest: #1e1e1e;
+    --bg-dark: #252526;
+    --bg-panel: #2d2d2d;
+    --bg-panel2: #333333;
+    --bg-row-hover: #2a3a4a;
+    --bg-row-selected: #1a3a5a;
+    --border: #3a3a3a;
+    --border-light: #454545;
+    --orange: #ff6633;
+    --orange-hover: #ff7744;
+    --blue: #4a9eff;
+    --green: #4ec94e;
+    --cyan: #56b6c2;
+    --yellow: #e5c07b;
+    --red: #e06c75;
+    --purple: #c678dd;
+    --text-primary: #d4d4d4;
+    --text-secondary: #888;
+    --text-muted: #666;
+  }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg-darkest);
+    color: var(--text-primary);
+    font-size: 12px;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* Title bar */
+  .titlebar {
+    background: var(--bg-dark);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 12px;
+    border-bottom: 1px solid var(--border);
+    min-height: 36px;
+    flex-shrink: 0;
+  }
+  .titlebar-left { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+  .back-btn {
+    background: none; border: none; color: var(--text-secondary);
+    cursor: pointer; font-size: 14px; padding: 2px 4px; border-radius: 3px;
+  }
+  .back-btn:hover { background: var(--bg-panel2); color: var(--text-primary); }
+  .titlebar-right { display: flex; align-items: center; gap: 6px; }
+  .btn-orange {
+    background: var(--orange); border: none; color: #fff;
+    padding: 4px 12px; border-radius: 3px; cursor: pointer;
+    font-size: 11px; font-weight: 600; display: flex; align-items: center; gap: 4px;
+  }
+  .btn-orange:hover { background: var(--orange-hover); }
+  .btn-save {
+    background: var(--bg-panel2); border: 1px solid var(--border-light);
+    color: var(--text-primary); padding: 4px 10px; border-radius: 3px;
+    cursor: pointer; font-size: 11px; display: flex; align-items: center; gap: 4px;
+  }
+  .btn-save:hover { background: #3a3a3a; }
+  .icon-btn {
+    background: none; border: none; color: var(--text-secondary);
+    cursor: pointer; padding: 4px 6px; border-radius: 3px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .icon-btn:hover { background: var(--bg-panel2); color: var(--text-primary); }
+  .icon-btn.on { background: var(--bg-panel2); color: #fff; }
+
+  /* Tab bar */
+  .tabbar {
+    background: var(--bg-dark);
+    display: flex; align-items: flex-end;
+    padding: 0 12px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .tab {
+    padding: 7px 16px; cursor: pointer;
+    color: var(--text-secondary); font-size: 12px;
+    border-bottom: 2px solid transparent; margin-bottom: -1px;
+    user-select: none;
+  }
+  .tab.active { color: var(--text-primary); border-bottom: 2px solid var(--orange); }
+  .tab:hover:not(.active) { color: var(--text-primary); }
+
+  /* Filter bars */
+  .filterbar {
+    background: var(--bg-panel); padding: 5px 12px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    flex-shrink: 0;
+  }
+  .filterbar-left { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-secondary); }
+  .filter-text { color: var(--text-primary); font-size: 11px; }
+  .toggle-switch {
+    width: 28px; height: 14px; background: #555;
+    border-radius: 7px; position: relative; cursor: pointer; display: inline-block;
+  }
+  .toggle-switch::after {
+    content: ''; position: absolute; width: 10px; height: 10px;
+    background: #888; border-radius: 50%; top: 2px; left: 2px; transition: left 0.2s;
+  }
+  .toggle-switch.on::after { left: 16px; background: var(--blue); }
+  .filterbar-right { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--text-secondary); }
+
+  /* Main layout */
+  .main-area { display: flex; flex: 1; overflow: hidden; }
+  .content-area { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
+
+  /* Table area */
+  .table-section {
+    flex: 0 0 200px; overflow-y: auto;
+    border-bottom: 1px solid var(--border); background: var(--bg-darkest);
+  }
+  .table-section table {
+    width: 100%; border-collapse: collapse;
+    font-size: 11px; font-family: 'JetBrains Mono', Consolas, monospace;
+  }
+  .table-section thead tr {
+    background: #1c2333; position: sticky; top: 0; z-index: 5;
+  }
+  .table-section th {
+    padding: 5px 10px; text-align: left; color: #8899aa;
+    font-weight: 500; border-right: 1px solid #2a3040;
+    white-space: nowrap; cursor: pointer; user-select: none;
+  }
+  .table-section th:hover { background: #222c3c; }
+  .table-section td {
+    padding: 4px 10px; border-bottom: 1px solid #2a2a2a;
+    color: var(--text-primary); white-space: nowrap;
+  }
+  .table-section tr:hover td { background: var(--bg-row-hover); cursor: pointer; }
+  .table-section tr.selected td { background: var(--bg-row-selected); }
+  .sort-indicator { color: var(--text-secondary); font-size: 9px; margin-left: 4px; }
+
+  /* Pane area */
+  .pane-area { display: flex; flex: 1; overflow: hidden; }
+  .request-panel, .response-panel {
+    flex: 1; display: flex; flex-direction: column;
+    border-right: 1px solid var(--border); overflow: hidden; min-width: 0;
+  }
+  .panel-header {
+    background: var(--bg-panel); padding: 0 10px;
+    font-size: 12px; font-weight: 600; color: var(--text-primary);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; height: 26px; flex-shrink: 0;
+  }
+  .panel-header span { flex: 1; }
+  .panel-tabs {
+    display: flex; align-items: center; background: var(--bg-panel);
+    border-bottom: 1px solid var(--border); padding: 0 8px;
+    flex-shrink: 0; justify-content: space-between;
+  }
+  .panel-tabs-left { display: flex; }
+  .panel-tab {
+    padding: 4px 10px; font-size: 11px; cursor: pointer;
+    color: var(--text-secondary); border-bottom: 2px solid transparent; margin-bottom: -1px;
+  }
+  .panel-tab.active { color: var(--text-primary); border-bottom: 2px solid var(--orange); }
+  .panel-tab:hover:not(.active) { color: var(--text-primary); }
+  .panel-toolbar { display: flex; align-items: center; gap: 2px; }
+  .code-area {
+    flex: 1; overflow: auto;
+    font-family: 'JetBrains Mono', Consolas, monospace;
+    font-size: 11px; line-height: 1.6; padding: 4px 0;
+    background: var(--bg-darkest);
+  }
+  .code-line { display: flex; padding: 0 8px; min-height: 17px; }
+  .code-line:hover { background: rgba(255,255,255,0.03); }
+  .line-num { color: #555; min-width: 24px; text-align: right; margin-right: 12px; user-select: none; flex-shrink: 0; }
+  .code-content { flex: 1; word-break: break-all; }
+  .c-method { color: #569cd6; }
+  .c-path { color: var(--text-primary); }
+  .c-proto { color: var(--text-secondary); }
+  .c-header-name { color: var(--cyan); }
+  .c-header-val { color: var(--text-primary); }
+  .c-cookie { color: var(--green); }
+  .c-status-3xx { color: var(--yellow); }
+  .c-redirect { color: var(--blue); }
+  .c-payload { background: rgba(255,102,51,.2); color: var(--orange); border: 1px solid rgba(255,102,51,.4); border-radius: 2px; padding: 0 2px; }
+  .panel-searchbar {
+    border-top: 1px solid var(--border); padding: 3px 8px;
+    display: flex; align-items: center; gap: 6px;
+    background: var(--bg-panel); flex-shrink: 0;
+  }
+  .panel-searchbar input {
+    background: var(--bg-dark); border: 1px solid var(--border);
+    color: var(--text-primary); padding: 2px 6px; font-size: 11px;
+    border-radius: 2px; flex: 1; outline: none; font-family: inherit;
+  }
+
+  /* Inspector panel */
+  .inspector-panel {
+    width: 260px; flex-shrink: 0; display: flex; flex-direction: column;
+    background: var(--bg-dark); border-left: 1px solid var(--border); overflow-y: auto;
+  }
+  .inspector-header {
+    background: var(--bg-panel); padding: 0 10px;
+    font-size: 12px; font-weight: 600; color: var(--text-primary);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    height: 26px; flex-shrink: 0;
+  }
+  .inspector-toolbar { display: flex; gap: 2px; align-items: center; }
+  .inspector-toolbar button {
+    background: none; border: none; color: var(--text-secondary);
+    cursor: pointer; padding: 2px 3px; font-size: 11px;
+    border-radius: 2px; display: flex; align-items: center;
+  }
+  .inspector-toolbar button:hover { background: var(--bg-panel2); color: var(--text-primary); }
+  .inspector-section { border-bottom: 1px solid var(--border); }
+  .inspector-section-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 7px 10px; cursor: pointer; user-select: none;
+    font-size: 11px; color: var(--text-primary);
+  }
+  .inspector-section-header:hover { background: var(--bg-panel); }
+  .inspector-section-count {
+    background: var(--bg-panel2); color: var(--text-secondary);
+    padding: 1px 6px; border-radius: 10px; font-size: 10px;
+    margin-left: auto; margin-right: 6px;
+  }
+  .inspector-chevron { color: var(--text-secondary); font-size: 10px; }
+  .inspector-section-body {
+    padding: 4px 10px 6px; font-size: 10px; color: var(--text-secondary); display: none;
+  }
+  .inspector-section.open .inspector-section-body { display: block; }
+  .insp-row {
+    display: flex; justify-content: space-between; padding: 2px 0;
+    border-bottom: 1px solid #2a2a2a;
+  }
+  .insp-row:last-child { border-bottom: none; }
+  .insp-key { color: var(--cyan); }
+  .insp-val { color: var(--text-primary); word-break: break-all; max-width: 140px; text-align: right; }
+
+  /* Right sidebar */
+  .right-sidebar {
+    width: 28px; background: var(--bg-panel); border-left: 1px solid var(--border);
+    display: flex; flex-direction: column; align-items: center;
+    padding: 6px 0; flex-shrink: 0; overflow: hidden;
+  }
+  .sidebar-item {
+    writing-mode: vertical-rl; transform: rotate(180deg);
+    font-size: 10px; color: var(--text-secondary);
+    cursor: pointer; padding: 6px 4px; border-radius: 3px;
+    white-space: nowrap; letter-spacing: 0.5px; user-select: none;
+    width: 100%; display: flex; align-items: center; justify-content: center;
+  }
+  .sidebar-item:hover { color: var(--text-primary); background: var(--bg-panel2); }
+  .sidebar-item.active { color: var(--orange); }
+  .sidebar-icon {
+    color: var(--text-secondary); cursor: pointer;
+    padding: 4px; font-size: 13px; display: flex; align-items: center; justify-content: center;
+  }
+  .sidebar-icon:hover { color: var(--text-primary); }
+
+  /* Status bar */
+  .statusbar {
+    background: var(--bg-panel); border-top: 1px solid var(--border);
+    padding: 3px 12px; display: flex; align-items: center;
+    gap: 10px; font-size: 10px; color: var(--text-secondary); flex-shrink: 0;
+  }
+  .status-text { color: var(--text-primary); font-weight: 500; }
+  .progress-bar-outer {
+    flex: 1; height: 6px; background: var(--bg-dark);
+    border-radius: 3px; overflow: hidden; border: 1px solid var(--border);
+  }
+  .progress-bar-inner { height: 100%; width: 45%; background: var(--blue); }
+
+  /* Dividers */
+  .divider-h {
+    width: 4px; background: var(--border); cursor: col-resize; flex-shrink: 0;
+  }
+  .divider-h:hover { background: var(--blue); }
+  .divider-v {
+    height: 4px; background: var(--border); cursor: row-resize; flex-shrink: 0;
+  }
+  .divider-v:hover { background: var(--blue); }
+
+  /* Scrollbars */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg-darkest); }
+  ::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: #555; }
+</style>
+</head>
+<body>
+
+<!-- Title Bar -->
+<div class="titlebar">
+  <div class="titlebar-left">
+    <button class="back-btn" title="Back to Positions" onclick="window.location.href='/intruder-positions'">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M13 8H3M7 4L3 8l4 4"/></svg>
+    </button>
+    <span>3. Intruder attack of https://test-sisko.bp2mi.go.id</span>
+  </div>
+  <div class="titlebar-right">
+    <button class="btn-orange">Attack
+      <svg width="8" height="8" viewBox="0 0 8 8" fill="currentColor"><path d="M1 2.5h6L4 6z"/></svg>
+    </button>
+    <button class="btn-save">Save
+      <svg width="8" height="8" viewBox="0 0 8 8" fill="currentColor"><path d="M1 2.5h6L4 6z"/></svg>
+    </button>
+    <button class="icon-btn" title="Help">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6.2"/><path d="M6.2 6.3a1.9 1.9 0 113 1.5c-.7.5-1.2.9-1.2 1.7"/><circle cx="8" cy="11.5" r=".5" fill="currentColor"/></svg>
+    </button>
+    <button class="icon-btn" title="Settings">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33h0a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51h0a1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82v0a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+    </button>
+  </div>
+</div>
+
+<!-- Tab Bar -->
+<div class="tabbar">
+  <div class="tab active" onclick="switchTab('results')">Results</div>
+  <div class="tab" onclick="switchTab('positions')">Positions</div>
+</div>
+
+<!-- Capture Filter Bar -->
+<div class="filterbar">
+  <div class="filterbar-left">
+    <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h12L9.5 8.5V13l-3-1.5V8.5z"/></svg>
+    <span class="filter-text">Capture filter:</span>
+    <span>Capturing all items</span>
+  </div>
+  <div class="filterbar-right">
+    <span>Apply capture filter</span>
+    <div class="toggle-switch on" onclick="this.classList.toggle('on')"></div>
+  </div>
+</div>
+
+<!-- View Filter Bar -->
+<div class="filterbar">
+  <div class="filterbar-left">
+    <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h12L9.5 8.5V13l-3-1.5V8.5z"/></svg>
+    <span class="filter-text">View filter:</span>
+    <span>Showing all items</span>
+  </div>
+  <div class="filterbar-right">
+    <button class="icon-btn">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="3.5" r="1"/><circle cx="8" cy="8" r="1"/><circle cx="8" cy="12.5" r="1"/></svg>
+    </button>
+  </div>
+</div>
+
+<!-- Main Area -->
+<div class="main-area">
+  <div class="content-area">
+
+    <!-- Results Table -->
+    <div class="table-section" id="table-section">
+      <table>
+        <thead>
+          <tr>
+            <th onclick="sortTable(0)">Request <span class="sort-indicator">▾</span></th>
+            <th onclick="sortTable(1)">Payload <span class="sort-indicator"></span></th>
+            <th onclick="sortTable(2)">Status code <span class="sort-indicator"></span></th>
+            <th onclick="sortTable(3)">Response received <span class="sort-indicator"></span></th>
+            <th onclick="sortTable(4)">Error <span class="sort-indicator"></span></th>
+            <th onclick="sortTable(5)">Timeout <span class="sort-indicator"></span></th>
+            <th onclick="sortTable(6)">Length <span class="sort-indicator"></span></th>
+            <th onclick="sortTable(7)">Comment <span class="sort-indicator"></span></th>
+          </tr>
+        </thead>
+        <tbody id="results-tbody">
+          <tr class="selected" onclick="selectRow(this, 'kelly')"><td>396</td><td>kelly</td><td>303</td><td>60</td><td></td><td></td><td>1095</td><td></td></tr>
+          <tr onclick="selectRow(this, 'katrina')"><td>395</td><td>katrina</td><td>303</td><td>61</td><td></td><td></td><td>1095</td><td></td></tr>
+          <tr onclick="selectRow(this, 'katina')"><td>394</td><td>katina</td><td>303</td><td>61</td><td></td><td></td><td>1095</td><td></td></tr>
+          <tr onclick="selectRow(this, 'kathy')"><td>393</td><td>kathy</td><td>303</td><td>320</td><td></td><td></td><td>1095</td><td></td></tr>
+          <tr onclick="selectRow(this, 'kathrine')"><td>392</td><td>kathrine</td><td>303</td><td>69</td><td></td><td></td><td>1095</td><td></td></tr>
+          <tr onclick="selectRow(this, 'kathleen')"><td>391</td><td>kathleen</td><td>303</td><td>75</td><td></td><td></td><td>1095</td><td></td></tr>
+          <tr onclick="selectRow(this, 'kate')"><td>390</td><td>kate</td><td>303</td><td>177</td><td></td><td></td><td>1095</td><td></td></tr>
+          <tr onclick="selectRow(this, 'karina')"><td>389</td><td>karina</td><td>303</td><td>68</td><td></td><td></td><td>1095</td><td></td></tr>
+          <tr onclick="selectRow(this, 'karie')"><td>388</td><td>karie</td><td>303</td><td>149</td><td></td><td></td><td>1095</td><td></td></tr>
+          <tr onclick="selectRow(this, 'karen')"><td>387</td><td>karen</td><td>303</td><td>63</td><td></td><td></td><td>1095</td><td></td></tr>
+          <tr onclick="selectRow(this, 'jupiter')"><td>386</td><td>jupiter</td><td>303</td><td>278</td><td></td><td></td><td>1095</td><td></td></tr>
+          <tr onclick="selectRow(this, 'june')"><td>385</td><td>june</td><td>303</td><td>178</td><td></td><td></td><td>1095</td><td></td></tr>
+          <tr onclick="selectRow(this, 'julia')"><td>384</td><td>julia</td><td>303</td><td>95</td><td></td><td></td><td>1095</td><td></td></tr>
+          <tr onclick="selectRow(this, 'julian')"><td>383</td><td>julian</td><td>303</td><td>88</td><td></td><td></td><td>1095</td><td></td></tr>
+          <tr onclick="selectRow(this, 'judge')"><td>382</td><td>judge</td><td>303</td><td>70</td><td></td><td></td><td>1095</td><td></td></tr>
+          <tr onclick="selectRow(this, 'joseph')"><td>381</td><td>joseph</td><td>303</td><td>65</td><td></td><td></td><td>1095</td><td></td></tr>
+          <tr onclick="selectRow(this, 'jordan')"><td>380</td><td>jordan</td><td>303</td><td>82</td><td></td><td></td><td>1095</td><td></td></tr>
+          <tr onclick="selectRow(this, 'joker')"><td>379</td><td>joker</td><td>303</td><td>195</td><td></td><td></td><td>1095</td><td></td></tr>
+          <tr onclick="selectRow(this, 'jessica')"><td>378</td><td>jessica</td><td>303</td><td>74</td><td></td><td></td><td>1095</td><td></td></tr>
+          <tr onclick="selectRow(this, 'jesus')"><td>377</td><td>jesus</td><td>303</td><td>80</td><td></td><td></td><td>1095</td><td></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="divider-v" id="vdivider"></div>
+
+    <!-- Bottom panes -->
+    <div class="pane-area" id="pane-area">
+
+      <!-- Request Panel -->
+      <div class="request-panel" id="req-panel">
+        <div class="panel-header">
+          <span>Request</span>
+        </div>
+        <div class="panel-tabs">
+          <div class="panel-tabs-left">
+            <div class="panel-tab active" onclick="switchReqTab(this, 'pretty')">Pretty</div>
+            <div class="panel-tab" onclick="switchReqTab(this, 'raw')">Raw</div>
+            <div class="panel-tab" onclick="switchReqTab(this, 'hex')">Hex</div>
+          </div>
+          <div class="panel-toolbar">
+            <button class="icon-btn" title="Show non-printable"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M1 8s2.5-4.5 7-4.5S15 8 15 8s-2.5 4.5-7 4.5S1 8 1 8z"/><circle cx="8" cy="8" r="2"/></svg></button>
+            <button class="icon-btn" title="Word wrap"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3.5h12M2 8h9.5a2 2 0 010 4H8"/><path d="M9.5 10.3L8 12l1.5 1.7M2 12.5h3"/></svg></button>
+            <button class="icon-btn" title="New line"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M13 3v5H4M6.5 5.5L4 8l2.5 2.5"/><path d="M2 13h12"/></svg></button>
+            <button class="icon-btn" title="Justify"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3.5h12M2 6.5h12M2 9.5h12M2 12.5h12"/></svg></button>
+          </div>
+        </div>
+        <div class="code-area" id="req-code">
+          <div class="code-line"><span class="line-num">1</span><span class="code-content"><span class="c-method">POST</span> <span class="c-path">/otentikasi/login/</span> <span class="c-proto">HTTP/1.1</span></span></div>
+          <div class="code-line"><span class="line-num">2</span><span class="code-content"><span class="c-header-name">Host:</span> <span class="c-header-val">test-sisko.bp2mi.go.id</span></span></div>
+          <div class="code-line"><span class="line-num">3</span><span class="code-content"><span class="c-header-name">Cookie:</span> <span class="c-cookie">csrf_cookie_name=c93f0401c15a7b303f7379c3152e3a77; ci_session=gg7uqtt6hcvfbv4t24h3bkt9noiobdek; _ga=GA1.1.1481241135.1792637564</span></span></div>
+          <div class="code-line"><span class="line-num">4</span><span class="code-content"><span class="c-header-name">Content-Length:</span> <span class="c-header-val">89</span></span></div>
+          <div class="code-line"><span class="line-num">5</span><span class="code-content"><span class="c-header-name">Content-Type:</span> <span class="c-header-val">application/x-www-form-urlencoded</span></span></div>
+          <div class="code-line"><span class="line-num">6</span><span class="code-content"><span class="c-header-name">User-Agent:</span> <span class="c-header-val">Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36</span></span></div>
+          <div class="code-line"><span class="line-num">7</span><span class="code-content"><span class="c-header-name">Origin:</span> <span class="c-header-val">https://test-sisko.bp2mi.go.id</span></span></div>
+          <div class="code-line"><span class="line-num">8</span><span class="code-content"><span class="c-header-name">Accept:</span> <span class="c-header-val">text/html,application/xhtml+xml,application/xml;q=0.9</span></span></div>
+          <div class="code-line"><span class="line-num">9</span><span class="code-content"><span class="c-header-name">Sec-Fetch-Site:</span> <span class="c-header-val">same-origin</span></span></div>
+          <div class="code-line"><span class="line-num">10</span><span class="code-content"><span class="c-header-name">Sec-Fetch-Mode:</span> <span class="c-header-val">navigate</span></span></div>
+          <div class="code-line"><span class="line-num">11</span><span class="code-content"><span class="c-header-name">Connection:</span> <span class="c-header-val">keep-alive</span></span></div>
+          <div class="code-line"><span class="line-num">12</span><span class="code-content"></span></div>
+          <div class="code-line"><span class="line-num">13</span><span class="code-content"><span class="c-cookie">csrf_test_name=c93f0401c15a7b303f7379c3152e3a77&amp;t_tipe=1&amp;t_nik=a&amp;t_pwd=<span class="c-payload">§kelly§</span>&amp;t_captcha=16</span></span></div>
+        </div>
+        <div class="panel-searchbar">
+          <span style="color:var(--text-secondary);font-size:11px;">?</span>
+          <span style="color:var(--text-secondary);font-size:12px;">←</span>
+          <span style="color:var(--text-secondary);font-size:12px;">→</span>
+          <input type="text" placeholder="Search">
+          <span style="color:var(--text-muted);font-size:10px;">0 highlights</span>
+        </div>
+      </div>
+
+      <div class="divider-h" id="hdivider"></div>
+
+      <!-- Response Panel -->
+      <div class="response-panel" id="resp-panel">
+        <div class="panel-header">
+          <span>Response</span>
+          <div style="display:flex;gap:2px;padding-right:4px;">
+            <button class="icon-btn layout-btn on" data-l="v" title="Side by side" onclick="setLayout('v')">
+              <svg width="15" height="13" viewBox="0 0 15 13" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="1" y="1.5" width="13" height="10" rx="1"/><line x1="7.5" y1="1.5" x2="7.5" y2="11.5"/></svg>
+            </button>
+            <button class="icon-btn layout-btn" data-l="h" title="Stacked" onclick="setLayout('h')">
+              <svg width="15" height="13" viewBox="0 0 15 13" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="1" y="1.5" width="13" height="10" rx="1"/><line x1="1" y1="6.5" x2="14" y2="6.5"/></svg>
+            </button>
+            <button class="icon-btn layout-btn" data-l="s" title="Single pane" onclick="setLayout('s')">
+              <svg width="15" height="13" viewBox="0 0 15 13" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="1" y="1.5" width="13" height="10" rx="1"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="panel-tabs">
+          <div class="panel-tabs-left">
+            <div class="panel-tab active" onclick="switchRespTab(this, 'pretty')">Pretty</div>
+            <div class="panel-tab" onclick="switchRespTab(this, 'raw')">Raw</div>
+            <div class="panel-tab" onclick="switchRespTab(this, 'hex')">Hex</div>
+            <div class="panel-tab" onclick="switchRespTab(this, 'render')">Render</div>
+          </div>
+          <div class="panel-toolbar">
+            <button class="icon-btn" title="Show non-printable"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M1 8s2.5-4.5 7-4.5S15 8 15 8s-2.5 4.5-7 4.5S1 8 1 8z"/><circle cx="8" cy="8" r="2"/></svg></button>
+            <button class="icon-btn" title="Word wrap"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3.5h12M2 8h9.5a2 2 0 010 4H8"/><path d="M9.5 10.3L8 12l1.5 1.7M2 12.5h3"/></svg></button>
+            <button class="icon-btn" title="New line"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M13 3v5H4M6.5 5.5L4 8l2.5 2.5"/><path d="M2 13h12"/></svg></button>
+            <button class="icon-btn" title="Justify"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3.5h12M2 6.5h12M2 9.5h12M2 12.5h12"/></svg></button>
+          </div>
+        </div>
+        <div class="code-area" id="resp-code">
+          <div class="code-line"><span class="line-num">1</span><span class="code-content c-status-3xx">HTTP/1.1 303 See Other</span></div>
+          <div class="code-line"><span class="line-num">2</span><span class="code-content"><span class="c-header-name">Server:</span> <span class="c-header-val">nginx/1.18.0</span></span></div>
+          <div class="code-line"><span class="line-num">3</span><span class="code-content"><span class="c-header-name">Date:</span> <span class="c-header-val">Thu, 22 Oct 2026 03:27:20 GMT</span></span></div>
+          <div class="code-line"><span class="line-num">4</span><span class="code-content"><span class="c-header-name">Content-Type:</span> <span class="c-header-val">text/html; charset=UTF-8</span></span></div>
+          <div class="code-line"><span class="line-num">5</span><span class="code-content"><span class="c-header-name">Connection:</span> <span class="c-header-val">keep-alive</span></span></div>
+          <div class="code-line"><span class="line-num">6</span><span class="code-content"><span class="c-header-name">Set-Cookie:</span> <span class="c-cookie">csrf_cookie_name=e315e28cb7fc152f947c04e704978d09; expires=Thu, 22-Oct-2026 05:27:20 GMT; Max-Age=7200; path=/; secure; HttpOnly</span></span></div>
+          <div class="code-line"><span class="line-num">7</span><span class="code-content"><span class="c-header-name">Cache-Control:</span> <span class="c-header-val">no-store, no-cache, must-revalidate</span></span></div>
+          <div class="code-line"><span class="line-num">8</span><span class="code-content"><span class="c-header-name">Location:</span> <span class="c-redirect">https://test-sisko.bp2mi.go.id/publik/login</span></span></div>
+          <div class="code-line"><span class="line-num">9</span><span class="code-content"><span class="c-header-name">X-Content-Type-Options:</span> <span class="c-header-val">nosniff</span></span></div>
+          <div class="code-line"><span class="line-num">10</span><span class="code-content"><span class="c-header-name">X-Frame-Options:</span> <span class="c-header-val">SAMEORIGIN</span></span></div>
+          <div class="code-line"><span class="line-num">11</span><span class="code-content"><span class="c-header-name">Strict-Transport-Security:</span> <span class="c-header-val">max-age=31536000</span></span></div>
+          <div class="code-line"><span class="line-num">12</span><span class="code-content"><span class="c-header-name">Referrer-Policy:</span> <span class="c-header-val">strict-origin-when-cross-origin</span></span></div>
+          <div class="code-line"><span class="line-num">13</span><span class="code-content"><span class="c-header-name">Content-Length:</span> <span class="c-header-val">0</span></span></div>
+          <div class="code-line"><span class="line-num">14</span><span class="code-content"></span></div>
+        </div>
+        <div class="panel-searchbar">
+          <span style="color:var(--text-secondary);font-size:11px;">?</span>
+          <span style="color:var(--text-secondary);font-size:12px;">←</span>
+          <span style="color:var(--text-secondary);font-size:12px;">→</span>
+          <input type="text" placeholder="Search">
+          <span style="color:var(--text-muted);font-size:10px;">0 highlights</span>
+        </div>
+      </div>
+
+      <!-- Inspector Panel -->
+      <div class="inspector-panel">
+        <div class="inspector-header">
+          Inspector
+          <div class="inspector-toolbar">
+            <button title="List view"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4h12M2 8h12M2 12h12"/></svg></button>
+            <button title="Table view"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3.5h12M2 8h12M2 12.5h8"/></svg></button>
+            <button title="Close"><svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l10 10M13 3L3 13"/></svg></button>
+          </div>
+        </div>
+
+        <div class="inspector-section">
+          <div class="inspector-section-header" onclick="toggleSection(this)">
+            <span>Request attributes</span>
+            <span class="inspector-section-count">2</span>
+            <span class="inspector-chevron">▶</span>
+          </div>
+          <div class="inspector-section-body">
+            <div class="insp-row"><span class="insp-key">Method</span><span class="insp-val" style="color:var(--cyan)">POST</span></div>
+            <div class="insp-row"><span class="insp-key">Protocol</span><span class="insp-val" style="color:var(--cyan)">HTTP/1.1</span></div>
+          </div>
+        </div>
+
+        <div class="inspector-section">
+          <div class="inspector-section-header" onclick="toggleSection(this)">
+            <span>Request body parameters</span>
+            <span class="inspector-section-count">5</span>
+            <span class="inspector-chevron">▶</span>
+          </div>
+          <div class="inspector-section-body">
+            <div class="insp-row"><span class="insp-key">csrf_test_name</span><span class="insp-val">c93f0401…</span></div>
+            <div class="insp-row"><span class="insp-key">t_tipe</span><span class="insp-val">1</span></div>
+            <div class="insp-row"><span class="insp-key">t_nik</span><span class="insp-val">a</span></div>
+            <div class="insp-row"><span class="insp-key">t_pwd</span><span class="insp-val" id="insp-payload" style="color:var(--orange)">§kelly§</span></div>
+            <div class="insp-row"><span class="insp-key">t_captcha</span><span class="insp-val">16</span></div>
+          </div>
+        </div>
+
+        <div class="inspector-section">
+          <div class="inspector-section-header" onclick="toggleSection(this)">
+            <span>Request cookies</span>
+            <span class="inspector-section-count">3</span>
+            <span class="inspector-chevron">▶</span>
+          </div>
+          <div class="inspector-section-body">
+            <div class="insp-row"><span class="insp-key">csrf_cookie_name</span></div>
+            <div class="insp-row"><span class="insp-key">ci_session</span></div>
+            <div class="insp-row"><span class="insp-key">_ga</span></div>
+          </div>
+        </div>
+
+        <div class="inspector-section">
+          <div class="inspector-section-header" onclick="toggleSection(this)">
+            <span>Request headers</span>
+            <span class="inspector-section-count">11</span>
+            <span class="inspector-chevron">▶</span>
+          </div>
+          <div class="inspector-section-body">
+            <span style="color:var(--text-muted);">11 headers — expand to view</span>
+          </div>
+        </div>
+
+        <div class="inspector-section">
+          <div class="inspector-section-header" onclick="toggleSection(this)">
+            <span>Response headers</span>
+            <span class="inspector-section-count">13</span>
+            <span class="inspector-chevron">▶</span>
+          </div>
+          <div class="inspector-section-body">
+            <span style="color:var(--text-muted);">13 headers — expand to view</span>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- end pane-area -->
+
+  </div><!-- end content-area -->
+
+  <!-- Right sidebar -->
+  <div class="right-sidebar">
+    <div class="sidebar-item active">Payloads</div>
+    <div class="sidebar-item">Resource pool</div>
+    <div style="flex:1;"></div>
+    <div class="sidebar-icon">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6.2"/><path d="M10 5.8C9.6 5 8.9 4.7 8 4.7c-1.1 0-1.8.5-1.8 1.3 0 .9.8 1.2 1.8 1.4 1 .2 1.8.5 1.8 1.4 0 .8-.7 1.3-1.8 1.3-.9 0-1.7-.4-2-1.2M8 3.3v1.4M8 11.3v1.4"/></svg>
+    </div>
+    <div class="sidebar-icon">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6.2"/><path d="M8 4.5V8l2.5 1.5"/></svg>
+    </div>
+    <div class="sidebar-icon">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33h0a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51h0a1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82v0a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+    </div>
+  </div>
+</div>
+
+<!-- Status Bar -->
+<div class="statusbar">
+  <span class="status-text">Paused</span>
+  <div class="progress-bar-outer">
+    <div class="progress-bar-inner" id="progress-bar"></div>
+  </div>
+  <span id="progress-text">396 / 815</span>
+</div>
+
+<script>
+// ── Tab switching ──────────────────────────────────────────────
+function switchTab(name) {
+  if (name === 'positions') { window.location.href = '/intruder-positions'; return; }
+  document.querySelectorAll('.tabbar .tab').forEach((t, i) => {
+    t.classList.toggle('active', i === 0);
+  });
+}
+
+// ── Row selection ──────────────────────────────────────────────
+function selectRow(tr, payload) {
+  document.querySelectorAll('#results-tbody tr').forEach(r => r.classList.remove('selected'));
+  tr.classList.add('selected');
+  // Update the §payload§ display in request and inspector
+  const payloadSpan = document.querySelector('#req-code .c-payload');
+  if (payloadSpan) payloadSpan.textContent = '§' + payload + '§';
+  const inspPayload = document.getElementById('insp-payload');
+  if (inspPayload) inspPayload.textContent = '§' + payload + '§';
+}
+
+// ── Layout toggle ──────────────────────────────────────────────
+function setLayout(l) {
+  const paneArea = document.getElementById('pane-area');
+  const reqPanel = document.getElementById('req-panel');
+  const hdivider = document.getElementById('hdivider');
+
+  if (l === 'v') {
+    paneArea.style.flexDirection = 'row';
+    reqPanel.style.display = 'flex';
+    hdivider.style.display = 'block';
+  } else if (l === 'h') {
+    paneArea.style.flexDirection = 'column';
+    reqPanel.style.display = 'flex';
+    reqPanel.style.flex = '1';
+    hdivider.style.display = 'block';
+    hdivider.style.width = 'auto';
+    hdivider.style.height = '4px';
+    hdivider.style.cursor = 'row-resize';
+  } else {
+    reqPanel.style.display = 'none';
+    hdivider.style.display = 'none';
+    paneArea.style.flexDirection = 'row';
+  }
+  document.querySelectorAll('.layout-btn').forEach(b => b.classList.remove('on'));
+  document.querySelector('.layout-btn[data-l="' + l + '"]').classList.add('on');
+}
+
+// ── Inspector sections ─────────────────────────────────────────
+function toggleSection(header) {
+  const section = header.closest('.inspector-section');
+  section.classList.toggle('open');
+  header.querySelector('.inspector-chevron').textContent = section.classList.contains('open') ? '▾' : '▶';
+}
+
+// ── Panel tab switching ────────────────────────────────────────
+function switchReqTab(el, tab) {
+  el.closest('.panel-tabs-left').querySelectorAll('.panel-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+}
+function switchRespTab(el, tab) {
+  el.closest('.panel-tabs-left').querySelectorAll('.panel-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+}
+
+// ── Sort table ─────────────────────────────────────────────────
+let sortCol = 0, sortDir = -1;
+
+function sortTable(colIdx) {
+  if (sortCol === colIdx) sortDir = -sortDir;
+  else { sortCol = colIdx; sortDir = colIdx === 0 ? -1 : 1; }
+  const tbody = document.getElementById('results-tbody');
+  const rows = Array.from(tbody.querySelectorAll('tr'));
+  rows.sort((a, b) => {
+    const av = a.cells[colIdx].textContent.trim();
+    const bv = b.cells[colIdx].textContent.trim();
+    const an = parseFloat(av), bn = parseFloat(bv);
+    if (!isNaN(an) && !isNaN(bn)) return (an - bn) * sortDir;
+    return av.localeCompare(bv) * sortDir;
+  });
+  rows.forEach(r => tbody.appendChild(r));
+  document.querySelectorAll('.table-section th').forEach((th, i) => {
+    const ind = th.querySelector('.sort-indicator');
+    if (ind) ind.textContent = i === colIdx ? (sortDir > 0 ? '▴' : '▾') : '';
+  });
+}
+
+// ── Resizable panels ───────────────────────────────────────────
+(function() {
+  const vdivider = document.getElementById('vdivider');
+  const tableSection = document.getElementById('table-section');
+  let dragging = false, startY, startH;
+  vdivider.addEventListener('mousedown', e => {
+    dragging = true; startY = e.clientY; startH = tableSection.offsetHeight;
+    document.body.style.cursor = 'row-resize'; document.body.style.userSelect = 'none';
+  });
+  document.addEventListener('mousemove', e => {
+    if (!dragging) return;
+    tableSection.style.flexBasis = Math.max(80, Math.min(400, startH + (e.clientY - startY))) + 'px';
+  });
+  document.addEventListener('mouseup', () => {
+    dragging = false; document.body.style.cursor = ''; document.body.style.userSelect = '';
+  });
+
+  const hdivider = document.getElementById('hdivider');
+  const reqPanel = document.getElementById('req-panel');
+  let hDragging = false, hStartX, hStartW;
+  hdivider.addEventListener('mousedown', e => {
+    hDragging = true; hStartX = e.clientX; hStartW = reqPanel.offsetWidth;
+    document.body.style.cursor = 'col-resize'; document.body.style.userSelect = 'none';
+  });
+  document.addEventListener('mousemove', e => {
+    if (!hDragging) return;
+    reqPanel.style.flex = 'none';
+    reqPanel.style.width = Math.max(200, Math.min(700, hStartW + (e.clientX - hStartX))) + 'px';
+  });
+  document.addEventListener('mouseup', () => {
+    hDragging = false; document.body.style.cursor = ''; document.body.style.userSelect = '';
+  });
+})();
+</script>
+</body>
+</html>

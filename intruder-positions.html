@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Burp Suite Professional - Intruder Positions</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#1e1e1e;--bg2:#252526;--bg3:#2d2d2d;--bg4:#333;
+  --border:#3a3a3a;--border2:#454545;
+  --orange:#ff6633;--blue:#4a9eff;--green:#4ec94e;--cyan:#56b6c2;
+  --text:#d4d4d4;--text2:#888;--text3:#666;
+  --font-mono:'JetBrains Mono',Consolas,monospace;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);font-size:12px;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+a{color:inherit;text-decoration:none}
+/* NAV */
+.nav{background:#1a1a1a;border-bottom:1px solid #111;display:flex;align-items:center;padding:0 12px;height:38px;gap:0;flex-shrink:0}
+.nav-item{padding:0 10px;height:38px;display:flex;align-items:center;font-size:11.5px;color:var(--text2);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap}
+.nav-item:hover{color:var(--text)}
+.nav-item.active{color:var(--orange);border-bottom-color:var(--orange)}
+.nav-dot{display:inline-block;width:5px;height:5px;background:#e05;border-radius:50%;margin-left:3px;vertical-align:middle}
+.nav-spacer{flex:1}
+.nav-icons{display:flex;align-items:center;gap:2px}
+.nav-icons button{background:none;border:none;color:var(--text2);cursor:pointer;padding:4px 6px;border-radius:3px;font-size:12px}
+.nav-icons button:hover{background:var(--bg3);color:var(--text)}
+.nav-badge{background:var(--orange);color:#fff;padding:2px 8px;border-radius:12px;font-size:10px;font-weight:700;margin-left:4px;display:flex;align-items:center;gap:4px}
+/* TAB STRIP */
+.tabstrip{background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 12px 0 8px;height:34px;gap:2px;flex-shrink:0}
+.tstrip-tab{background:var(--bg3);border:1px solid var(--border2);border-bottom:none;padding:4px 12px;font-size:11px;color:var(--text2);cursor:pointer;border-radius:3px 3px 0 0;display:flex;align-items:center;gap:6px}
+.tstrip-tab.active{background:var(--bg2);color:var(--text);border-bottom:1px solid var(--bg2)}
+.tstrip-tab .close{color:var(--text3);font-size:10px;cursor:pointer}
+.tstrip-tab .close:hover{color:var(--text)}
+.tstrip-add{background:none;border:none;color:var(--text2);padding:4px 8px;cursor:pointer;font-size:16px}
+.tstrip-add:hover{color:var(--text)}
+.tstrip-spacer{flex:1}
+.tstrip-icons{display:flex;gap:4px}
+.tstrip-icons button{background:none;border:none;color:var(--text2);cursor:pointer;padding:3px;font-size:12px}
+/* ATTACK BAR */
+.attack-bar{background:var(--bg2);border-bottom:1px solid var(--border);padding:6px 12px;display:flex;align-items:center;gap:8px;flex-shrink:0}
+.attack-dropdown{background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:4px 10px;border-radius:3px;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:6px;max-width:300px}
+.attack-dropdown select{background:transparent;border:none;color:var(--text);font-size:12px;outline:none;cursor:pointer}
+.btn-attack{background:var(--orange);border:none;color:#fff;padding:5px 14px;border-radius:3px;cursor:pointer;font-size:12px;font-weight:600;display:flex;align-items:center;gap:5px}
+.btn-attack:hover{background:#ff7744}
+/* TARGET BAR */
+.target-bar{background:var(--bg2);border-bottom:1px solid var(--border);padding:5px 12px;display:flex;align-items:center;gap:8px;flex-shrink:0}
+.target-label{color:var(--text2);font-size:11px;white-space:nowrap}
+.target-input{flex:1;background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:3px 8px;font-size:11px;font-family:var(--font-mono);border-radius:2px;outline:none}
+.target-input:focus{border-color:var(--blue)}
+.target-check{display:flex;align-items:center;gap:4px;color:var(--text2);font-size:11px;white-space:nowrap}
+.target-check input[type=checkbox]{accent-color:var(--blue)}
+/* SUBTAB BAR */
+.subtab-bar{background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 10px;height:30px;gap:2px;flex-shrink:0}
+.sub-tab{padding:4px 12px;font-size:11px;color:var(--text2);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;height:30px;display:flex;align-items:center}
+.sub-tab.active{color:var(--text);border-bottom-color:var(--orange)}
+.sub-tab:hover:not(.active){color:var(--text)}
+.sub-btn{background:var(--bg3);border:1px solid var(--border2);color:var(--text2);padding:3px 10px;font-size:11px;cursor:pointer;border-radius:2px;margin-left:4px}
+.sub-btn:hover{background:var(--bg4);color:var(--text)}
+/* MAIN SPLIT */
+.main-split{display:flex;flex:1;overflow:hidden}
+/* REQUEST EDITOR */
+.req-editor{flex:1;display:flex;flex-direction:column;overflow:hidden;border-right:1px solid var(--border)}
+/* Code wrap: scrollable container, relative for absolute children */
+.code-wrap{position:relative;flex:1;overflow:auto;background:#1a1a1a}
+.code-inner{position:relative;min-height:100%}
+#req-hl{
+  position:absolute;top:0;left:0;width:100%;
+  padding:4px 0;pointer-events:none;
+  font:11px/1.65 var(--font-mono);
+  white-space:pre-wrap;word-break:break-all;
+  z-index:1;color:var(--text);
+}
+#req-ta{
+  position:absolute;top:0;left:0;width:100%;height:100%;
+  background:transparent;color:transparent;caret-color:var(--text);
+  border:none;outline:none;resize:none;
+  padding:4px 8px;
+  font:11px/1.65 var(--font-mono);
+  z-index:2;overflow:hidden;
+}
+/* Lines in highlight overlay */
+.cl{display:flex;padding:0 8px;min-height:18px}
+.cl:hover{background:rgba(255,255,255,.03)}
+.ln{color:#444;min-width:24px;text-align:right;margin-right:12px;user-select:none;flex-shrink:0}
+.lc{flex:1;word-break:break-all}
+.pl{background:rgba(255,102,51,.2);color:var(--orange);border:1px solid rgba(255,102,51,.4);border-radius:2px;padding:0 2px}
+/* Code status bar */
+.code-statusbar{background:var(--bg3);border-top:1px solid var(--border);padding:3px 8px;display:flex;align-items:center;gap:8px;font-size:10px;color:var(--text2);flex-shrink:0}
+/* PAYLOAD PANEL */
+.payload-panel{width:310px;flex-shrink:0;display:flex;flex-direction:column;background:var(--bg2);overflow-y:auto}
+.pp-header{display:flex;align-items:center;padding:0 6px 0 10px;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--bg3);height:26px}
+.pp-title{font-size:12px;font-weight:600;color:var(--text);flex:1}
+.pp-icons{display:flex;gap:2px}
+.pp-icons button{background:none;border:none;color:var(--text2);cursor:pointer;padding:2px 4px;border-radius:3px}
+.pp-icons button:hover{background:var(--bg4);color:var(--text)}
+.pp-row{display:flex;align-items:center;gap:8px;padding:5px 10px;border-bottom:1px solid var(--border)}
+.pp-label{color:var(--text2);font-size:11px;min-width:100px}
+.pp-select{flex:1;background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:3px 6px;font-size:11px;border-radius:2px;outline:none;cursor:pointer}
+.pp-stats{display:flex;gap:16px;padding:5px 10px;border-bottom:1px solid var(--border)}
+.pp-stat{font-size:11px;color:var(--text2)}
+.pp-stat span{color:var(--text)}
+.pp-section{border-bottom:1px solid var(--border)}
+.pp-section-hdr{display:flex;align-items:center;padding:6px 10px;cursor:pointer;user-select:none;font-size:11px;color:var(--text);gap:6px;list-style:none}
+.pp-section-hdr:hover{background:var(--bg3)}
+.pp-section-hdr .chev{color:var(--text2);transition:transform .1s}
+.pp-section-hdr.open .chev{transform:rotate(90deg)}
+.pp-section-body{padding:6px 10px}
+.pp-desc{font-size:10px;color:var(--text2);margin-bottom:6px;line-height:1.5}
+.pp-btn-col{display:flex;flex-direction:column;gap:3px}
+.pp-btn{background:var(--bg3);border:1px solid var(--border2);color:var(--text2);padding:3px 8px;font-size:11px;cursor:pointer;border-radius:2px;text-align:center;width:90px}
+.pp-btn:hover{background:var(--bg4);color:var(--text)}
+.pp-list-area{background:#1a1a1a;border:1px solid var(--border);border-radius:2px;margin-bottom:6px;max-height:130px;overflow-y:auto;flex:1}
+.pp-list-item{padding:3px 8px;font-size:11px;font-family:var(--font-mono);color:var(--text);border-bottom:1px solid #2a2a2a;cursor:pointer;user-select:none}
+.pp-list-item:last-child{border-bottom:none}
+.pp-list-item:hover{background:var(--bg3)}
+.pp-list-item.selected{background:#1a3a5a;color:var(--blue)}
+.pp-add-row{display:flex;gap:4px;margin-top:6px;margin-bottom:4px}
+.pp-add-input{flex:1;background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:3px 6px;font-size:11px;border-radius:2px;outline:none;font-family:var(--font-mono)}
+.pp-add-input::placeholder{color:var(--text3)}
+.pp-add-input:focus{border-color:var(--blue)}
+.pp-add-btn{background:var(--bg3);border:1px solid var(--border2);color:var(--text2);padding:3px 8px;font-size:11px;cursor:pointer;border-radius:2px}
+.pp-add-btn:hover{background:var(--bg4);color:var(--text)}
+.pp-add-from{width:100%;background:var(--bg3);border:1px solid var(--border2);color:var(--text2);padding:3px 8px;font-size:11px;border-radius:2px;cursor:pointer;text-align:left;display:flex;justify-content:space-between;align-items:center}
+.pp-add-from:hover{background:var(--bg4);color:var(--text)}
+.pp-proc-btns{display:flex;flex-wrap:wrap;gap:3px;margin-bottom:6px}
+.pp-check-row{display:flex;align-items:flex-start;gap:6px;font-size:10px;color:var(--text2);line-height:1.4}
+.pp-check-row input{accent-color:var(--blue);flex-shrink:0;margin-top:2px}
+/* STATUS BAR */
+.statusbar{background:var(--bg3);border-top:1px solid var(--border);padding:3px 12px;display:flex;align-items:center;gap:12px;font-size:10px;color:var(--text2);flex-shrink:0}
+.sb-dot{display:inline-block;width:6px;height:6px;background:var(--orange);border-radius:50%;margin-right:3px}
+/* SCROLLBARS */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:#444;border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:#555}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<div class="nav">
+  <div class="nav-item">Dashboard</div>
+  <div class="nav-item">Target</div>
+  <div class="nav-item">Proxy</div>
+  <div class="nav-item active">Intruder</div>
+  <a href="/" class="nav-item">Repeater</a>
+  <div class="nav-item">Collaborator</div>
+  <div class="nav-item">Sequencer</div>
+  <div class="nav-item">Decoder</div>
+  <div class="nav-item">Comparer</div>
+  <div class="nav-item">Logger</div>
+  <div class="nav-item">Organizer</div>
+  <div class="nav-item">Extensions</div>
+  <div class="nav-item">Discover <span class="nav-dot"></span></div>
+  <div class="nav-spacer"></div>
+  <div class="nav-icons">
+    <button title="Browser">
+      <svg width="15" height="15" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.1"><circle cx="7" cy="7" r="5.5"/><ellipse cx="7" cy="7" rx="2.5" ry="5.5"/><line x1="1.5" y1="7" x2="12.5" y2="7"/></svg>
+    </button>
+    <button title="Terminal">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><rect x="1.5" y="2.5" width="13" height="11" rx="2"/><path d="M4.5 6l2.2 2-2.2 2M8.5 10.5h3"/></svg>
+    </button>
+    <button title="Search">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5L14 14"/></svg>
+    </button>
+    <button title="Settings">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33h0a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51h0a1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82v0a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+    </button>
+    <span class="nav-badge">
+      <svg width="9" height="11" viewBox="0 0 11 14" fill="#fff"><path d="M6.5 0L0 8h5L4.5 14 11 6H6L6.5 0z"/></svg>
+      Burp AT
+    </span>
+  </div>
+</div>
+
+<!-- TAB STRIP -->
+<div class="tabstrip">
+  <div class="tstrip-tab">1</div>
+  <div class="tstrip-tab active">2 <span class="close">×</span></div>
+  <button class="tstrip-add">+</button>
+  <div class="tstrip-spacer"></div>
+  <div class="tstrip-icons">
+    <button>
+      <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5L14 14"/></svg>
+    </button>
+    <button>
+      <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6l5 5 5-5"/></svg>
+    </button>
+  </div>
+</div>
+
+<!-- ATTACK BAR -->
+<div class="attack-bar">
+  <div class="attack-dropdown">
+    <select id="attack-type">
+      <option>Sniper attack</option>
+      <option>Battering ram</option>
+      <option>Pitchfork</option>
+      <option>Cluster bomb</option>
+    </select>
+  </div>
+  <div style="flex:1"></div>
+  <button class="btn-attack" onclick="startAttack()">
+    <svg width="10" height="10" viewBox="0 0 10 10" fill="#fff"><path d="M2 1l7 4-7 4z"/></svg>
+    Start attack
+  </button>
+</div>
+
+<!-- TARGET BAR -->
+<div class="target-bar">
+  <span class="target-label">Target</span>
+  <input class="target-input" id="target-url" type="text" value="https://test-sisko.bp2mi.go.id">
+  <label class="target-check"><input type="checkbox" checked> Update Host header to match target</label>
+</div>
+
+<!-- SUB-TABS -->
+<div class="subtab-bar">
+  <div class="sub-tab active">Positions</div>
+  <button class="sub-btn" onclick="addMarker()">Add §</button>
+  <button class="sub-btn" onclick="clearMarkers()">Clear §</button>
+  <button class="sub-btn" onclick="autoMarkers()">Auto §</button>
+</div>
+
+<!-- MAIN SPLIT -->
+<div class="main-split">
+
+  <!-- REQUEST EDITOR -->
+  <div class="req-editor">
+    <div class="code-wrap" id="code-wrap">
+      <div class="code-inner" id="code-inner">
+        <div id="req-hl"></div>
+        <textarea id="req-ta" spellcheck="false"></textarea>
+      </div>
+    </div>
+    <div class="code-statusbar">
+      <span id="sb-hl">0 highlights</span>
+      <span style="color:var(--text3)">|</span>
+      <span id="sb-pos">0 payload positions</span>
+      <div style="flex:1"></div>
+      <span id="sb-len">Length: 0</span>
+    </div>
+  </div>
+
+  <!-- PAYLOAD PANEL -->
+  <div class="payload-panel">
+    <div class="pp-header">
+      <span class="pp-title">Payloads</span>
+      <div class="pp-icons">
+        <button title="Grid view">
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="5" height="5"/><rect x="9" y="2" width="5" height="5"/><rect x="2" y="9" width="5" height="5"/><rect x="9" y="9" width="5" height="5"/></svg>
+        </button>
+        <button title="Copy">
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="10" height="11" rx="1.5"/><path d="M6 3V2h4v1"/></svg>
+        </button>
+        <button title="Close" onclick="this.closest('.payload-panel').style.display='none'">
+          <svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l10 10M13 3L3 13"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="pp-row">
+      <span class="pp-label">Payload position:</span>
+      <select class="pp-select" id="pp-position">
+        <option>All payload positions</option>
+        <option>Position 1</option>
+        <option>Position 2</option>
+      </select>
+    </div>
+    <div class="pp-row">
+      <span class="pp-label">Payload type:</span>
+      <select class="pp-select" id="pp-type" onchange="updatePayloadType()">
+        <option>Simple list</option>
+        <option>Runtime file</option>
+        <option>Custom iterator</option>
+        <option>Character blocks</option>
+        <option>Numbers</option>
+      </select>
+    </div>
+    <div class="pp-stats">
+      <span class="pp-stat">Payload count: <span id="pp-count">8</span></span>
+      <span class="pp-stat">Request count: <span id="pp-reqcount">8</span></span>
+    </div>
+
+    <!-- Payload configuration -->
+    <div class="pp-section">
+      <div class="pp-section-hdr open" onclick="toggleSection(this)">
+        <span class="chev">
+          <svg width="8" height="8" viewBox="0 0 8 8" fill="currentColor"><path d="M2 1l4 3-4 3z"/></svg>
+        </span>
+        Payload configuration
+      </div>
+      <div class="pp-section-body" id="pp-config-body">
+        <div class="pp-desc">This payload type lets you configure a simple list of strings that are used as payloads.</div>
+        <div style="display:flex;gap:8px">
+          <div class="pp-btn-col">
+            <button class="pp-btn" onclick="pastePayloads()">Paste</button>
+            <button class="pp-btn" onclick="loadPayloads()">Load...</button>
+            <button class="pp-btn" onclick="removePayload()">Remove</button>
+            <button class="pp-btn" onclick="clearPayloads()">Clear</button>
+            <button class="pp-btn" onclick="deduplicatePayloads()">Deduplicate</button>
+          </div>
+          <div class="pp-list-area" id="pp-list"></div>
+        </div>
+        <div class="pp-add-row">
+          <input class="pp-add-input" id="pp-add-input" type="text" placeholder="Enter a new item">
+          <button class="pp-add-btn" onclick="addPayload()">Add</button>
+        </div>
+        <button class="pp-add-from" onclick="showWordlists()">
+          Add from list...
+          <svg width="8" height="8" viewBox="0 0 8 8" fill="currentColor"><path d="M1 2.5h6L4 6z"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Payload processing -->
+    <div class="pp-section">
+      <div class="pp-section-hdr" onclick="toggleSection(this)">
+        <span class="chev">
+          <svg width="8" height="8" viewBox="0 0 8 8" fill="currentColor"><path d="M2 1l4 3-4 3z"/></svg>
+        </span>
+        Payload processing
+      </div>
+      <div class="pp-section-body" id="pp-proc-body" style="display:none">
+        <div class="pp-proc-btns">
+          <button class="pp-btn">Add</button>
+          <button class="pp-btn">Edit</button>
+          <button class="pp-btn">Remove</button>
+          <button class="pp-btn">Up</button>
+          <button class="pp-btn">Down</button>
+        </div>
+        <div style="background:#1a1a1a;border:1px solid var(--border);border-radius:2px;min-height:40px;padding:4px 8px;font-size:10px;color:var(--text3)">
+          No rules configured
+        </div>
+      </div>
+    </div>
+
+    <!-- Payload encoding -->
+    <div class="pp-section">
+      <div class="pp-section-hdr" onclick="toggleSection(this)">
+        <span class="chev">
+          <svg width="8" height="8" viewBox="0 0 8 8" fill="currentColor"><path d="M2 1l4 3-4 3z"/></svg>
+        </span>
+        Payload encoding
+      </div>
+      <div class="pp-section-body" id="pp-enc-body" style="display:none">
+        <div class="pp-check-row">
+          <input type="checkbox" checked id="pp-urlencode">
+          <label for="pp-urlencode">URL-encode these characters: ./\=&lt;&gt;?+&amp;";:[]{|}^#</label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- STATUS BAR -->
+<div class="statusbar">
+  <span><span class="sb-dot"></span>Event log (3)</span>
+  <span style="color:var(--text3)">|</span>
+  <span>All issues (34)</span>
+  <span style="color:var(--text3)">|</span>
+  <span>Memory: 207.4MB of 8.00GB</span>
+  <div style="flex:1"></div>
+  <button style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:10px;padding:0 2px">
+    <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="5" height="5"/><rect x="9" y="2" width="5" height="5"/><rect x="2" y="9" width="5" height="5"/><rect x="9" y="9" width="5" height="5"/></svg>
+  </button>
+  <div style="display:flex;align-items:center;gap:3px;color:#a78bfa;cursor:pointer;font-size:10px">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M9 3l1.8 5.2L16 10l-5.2 1.8L9 17l-1.8-5.2L2 10l5.2-1.8z"/><path d="M18 11l.9 2.6 2.6.9-2.6.9L18 18l-.9-2.6-2.6-.9 2.6-.9z"/></svg>
+    <svg width="8" height="8" viewBox="0 0 8 8" fill="currentColor"><path d="M1 2.5h6L4 6z"/></svg>
+  </div>
+</div>
+
+<script>
+const DEFAULT_REQUEST = `POST /otentikasi/login/ HTTP/1.1
+Host: test-sisko.bp2mi.go.id
+Cookie: csrf_cookie_name=c93f0401c15a7b303f7379c3152e3a77; ci_session=gg7uqtt6hcvfbv4t24h3bkt9noiobdek; _ga=GA1.1.1481241135.1792637564; _ga_QL01LSE4FP=GS2.1.s1792637564$o1$g0$t1792637571$j53$l0$h0
+Content-Length: 85
+Cache-Control: max-age=0
+Content-Type: application/x-www-form-urlencoded
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8
+Connection: keep-alive
+
+csrf_test_name=c93f0401c15a7b303f7379c3152e3a77&t_tipe=1&t_nik=§a§&t_pwd=§a§&t_captcha=16`;
+
+let payloads = ['aaa','abc','academia','academic','access','ada','admin','adrian'];
+let selectedPayload = -1;
+
+// ── Highlight engine ─────────────────────────────────────────────
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function highlightPayloads(s) {
+  return s.replace(/§([^§\n]*)§/g, '<span class="pl">§$1§</span>');
+}
+
+function highlightLine(line, idx) {
+  if (idx === 0) {
+    const m = line.match(/^(\S+)(\s+)(\S+)(\s+)(.*)$/);
+    if (m) {
+      const colors = {GET:'#61afef',POST:'#e5c07b',PUT:'#c678dd',DELETE:'#e06c75',PATCH:'#98c379',HEAD:'#56b6c2',OPTIONS:'#4ec94e'};
+      const mc = colors[m[1]] || '#d4d4d4';
+      return `<span style="color:${mc}">${escHtml(m[1])}</span>${m[2]}${highlightPayloads(escHtml(m[3]))}${m[4]}<span style="color:#888">${escHtml(m[5])}</span>`;
+    }
+    return highlightPayloads(escHtml(line));
+  }
+  if (!line.trim()) return '';
+  const c = line.indexOf(':');
+  if (c > 0 && !/^\s/.test(line)) {
+    const k = line.slice(0, c);
+    const v = line.slice(c + 1);
+    const kl = k.toLowerCase();
+    const isCookie = kl === 'cookie' || kl === 'set-cookie';
+    return `<span style="color:#56b6c2">${escHtml(k)}:</span><span style="color:${isCookie ? '#4ec94e' : '#d4d4d4'}">${highlightPayloads(escHtml(v))}</span>`;
+  }
+  return highlightPayloads(escHtml(line));
+}
+
+function renderLines(text) {
+  return text.split('\n').map((line, i) =>
+    `<div class="cl"><span class="ln">${i+1}</span><span class="lc">${highlightLine(line, i)}</span></div>`
+  ).join('');
+}
+
+// ── Sync overlay ──────────────────────────────────────────────────
+function syncOverlay() {
+  const ta = document.getElementById('req-ta');
+  const hl = document.getElementById('req-hl');
+  const inner = document.getElementById('code-inner');
+  const text = ta.value;
+
+  hl.innerHTML = renderLines(text);
+
+  // Make inner tall enough for the textarea to fill
+  const hlH = hl.offsetHeight;
+  const wrapH = document.getElementById('code-wrap').clientHeight;
+  const minH = Math.max(hlH, wrapH);
+  ta.style.height = minH + 'px';
+  inner.style.height = minH + 'px';
+
+  // Update status bar
+  const positions = (text.match(/§[^§\n]*§/g) || []).length;
+  const highlights = positions;
+  document.getElementById('sb-hl').textContent = highlights + ' highlight' + (highlights !== 1 ? 's' : '');
+  document.getElementById('sb-pos').textContent = positions + ' payload position' + (positions !== 1 ? 's' : '');
+  document.getElementById('sb-len').textContent = 'Length: ' + text.length;
+}
+
+// ── §-marker buttons ─────────────────────────────────────────────
+function addMarker() {
+  const ta = document.getElementById('req-ta');
+  const start = ta.selectionStart;
+  const end = ta.selectionEnd;
+  const val = ta.value;
+  if (start === end) {
+    ta.value = val.slice(0, start) + '§§' + val.slice(start);
+    ta.selectionStart = ta.selectionEnd = start + 1;
+  } else {
+    const selected = val.slice(start, end);
+    ta.value = val.slice(0, start) + '§' + selected + '§' + val.slice(end);
+    ta.selectionStart = start;
+    ta.selectionEnd = end + 2;
+  }
+  ta.focus();
+  syncOverlay();
+}
+
+function clearMarkers() {
+  const ta = document.getElementById('req-ta');
+  ta.value = ta.value.replace(/§/g, '');
+  ta.focus();
+  syncOverlay();
+}
+
+function autoMarkers() {
+  const ta = document.getElementById('req-ta');
+  let text = ta.value.replace(/§/g, '');
+  const blankIdx = text.indexOf('\n\n');
+  if (blankIdx >= 0) {
+    const headers = text.slice(0, blankIdx);
+    let body = text.slice(blankIdx + 2);
+    // Mark form param values: key=value → key=§value§
+    body = body.replace(/([?&]?)([^=&\n]+)=([^&\n§]*)/g, (m, sep, k, v) => {
+      return sep + k + '=§' + v + '§';
+    });
+    text = headers + '\n\n' + body;
+  }
+  // Also mark query string values in request line
+  const lines = text.split('\n');
+  if (lines[0]) {
+    lines[0] = lines[0].replace(/(\?|&)([^=&\s]+)=([^&\s§]*)/g, (m, sep, k, v) => sep + k + '=§' + v + '§');
+  }
+  ta.value = lines.join('\n');
+  ta.focus();
+  syncOverlay();
+}
+
+// ── Payload panel ────────────────────────────────────────────────
+function renderPayloads() {
+  const list = document.getElementById('pp-list');
+  list.innerHTML = payloads.map((p, i) =>
+    `<div class="pp-list-item${i === selectedPayload ? ' selected' : ''}" onclick="selectPayload(${i})">${escHtml(p)}</div>`
+  ).join('');
+  document.getElementById('pp-count').textContent = payloads.length;
+  document.getElementById('pp-reqcount').textContent = payloads.length;
+}
+
+function selectPayload(i) {
+  selectedPayload = (selectedPayload === i) ? -1 : i;
+  renderPayloads();
+}
+
+function addPayload() {
+  const input = document.getElementById('pp-add-input');
+  const val = input.value.trim();
+  if (!val) return;
+  payloads.push(val);
+  input.value = '';
+  selectedPayload = payloads.length - 1;
+  renderPayloads();
+  input.focus();
+}
+
+function removePayload() {
+  if (selectedPayload < 0 || selectedPayload >= payloads.length) return;
+  payloads.splice(selectedPayload, 1);
+  selectedPayload = Math.min(selectedPayload, payloads.length - 1);
+  if (payloads.length === 0) selectedPayload = -1;
+  renderPayloads();
+}
+
+function clearPayloads() {
+  payloads = [];
+  selectedPayload = -1;
+  renderPayloads();
+}
+
+function deduplicatePayloads() {
+  payloads = [...new Set(payloads)];
+  selectedPayload = -1;
+  renderPayloads();
+}
+
+async function pastePayloads() {
+  try {
+    const text = await navigator.clipboard.readText();
+    const lines = text.split('\n').map(l => l.trim()).filter(l => l);
+    payloads.push(...lines);
+    selectedPayload = -1;
+    renderPayloads();
+  } catch(e) {
+    // clipboard access denied — silently ignore
+  }
+}
+
+function loadPayloads() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.txt,.csv';
+  input.onchange = e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const lines = ev.target.result.split('\n').map(l => l.trim()).filter(l => l);
+      payloads.push(...lines);
+      selectedPayload = -1;
+      renderPayloads();
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
+
+function showWordlists() {
+  // Stub — show built-in wordlist options
+}
+
+// ── Section collapse ─────────────────────────────────────────────
+function toggleSection(hdr) {
+  const bodies = {
+    'pp-config-body': 'pp-config-body',
+    'pp-proc-body': 'pp-proc-body',
+    'pp-enc-body': 'pp-enc-body'
+  };
+  const body = hdr.nextElementSibling;
+  const isOpen = hdr.classList.toggle('open');
+  body.style.display = isOpen ? 'block' : 'none';
+}
+
+// ── Start attack ─────────────────────────────────────────────────
+function startAttack() {
+  const ta = document.getElementById('req-ta');
+  const target = document.getElementById('target-url').value;
+  try {
+    sessionStorage.setItem('intruder_request', ta.value);
+    sessionStorage.setItem('intruder_target', target);
+    sessionStorage.setItem('intruder_payloads', JSON.stringify(payloads));
+    sessionStorage.setItem('intruder_attack_type', document.getElementById('attack-type').value);
+  } catch(e) {}
+  window.location.href = '/intruder-attack';
+}
+
+// ── Add payload on Enter ─────────────────────────────────────────
+document.getElementById('pp-add-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') addPayload();
+});
+
+// ── Textarea input handler ────────────────────────────────────────
+const ta = document.getElementById('req-ta');
+ta.addEventListener('input', syncOverlay);
+ta.addEventListener('keydown', e => {
+  // Tab key inserts spaces
+  if (e.key === 'Tab') {
+    e.preventDefault();
+    const s = ta.selectionStart, end = ta.selectionEnd;
+    ta.value = ta.value.slice(0, s) + '  ' + ta.value.slice(end);
+    ta.selectionStart = ta.selectionEnd = s + 2;
+    syncOverlay();
+  }
+});
+
+// Sync scroll: code-wrap scrolls, ta scrolls too
+document.getElementById('code-wrap').addEventListener('scroll', function() {
+  ta.scrollTop = this.scrollTop;
+  ta.scrollLeft = this.scrollLeft;
+});
+
+// ── Init ─────────────────────────────────────────────────────────
+window.addEventListener('load', () => {
+  // Restore from session if available
+  const saved = sessionStorage.getItem('intruder_request');
+  const savedTarget = sessionStorage.getItem('intruder_target');
+  ta.value = saved || DEFAULT_REQUEST;
+  if (savedTarget) document.getElementById('target-url').value = savedTarget;
+  syncOverlay();
+  renderPayloads();
+
+  // Resize observer to keep overlay in sync when window resizes
+  new ResizeObserver(syncOverlay).observe(document.getElementById('code-wrap'));
+});
+</script>
+</body>
+</html>
