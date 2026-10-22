@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BurpShot</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#111;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#d4d4d4;font-size:12px}
+
+.w{
+  --bg2:#252526;--bg3:#2d2d2d;--bg4:#333;--bd:#3a3a3a;--bd2:#454545;
+  --or:#ff6633;--t2:#888;--t3:#666;--mono:'JetBrains Mono',Consolas,monospace;
+  height:100vh;display:flex;flex-direction:column;overflow:hidden;background:#1e1e1e
+}
+.w button{font-family:inherit}
+
+/* icon button */
+.ib{background:none;border:none;color:var(--t2);cursor:pointer;padding:4px 5px;border-radius:3px;display:flex;align-items:center;justify-content:center}
+.ib:hover{background:var(--bg4);color:#d4d4d4}
+.ib.on{background:var(--bg4);color:#fff}
+
+/* nav items */
+.nav-item{padding:0 4px;height:38px;display:flex;align-items:center;font-size:11px;flex-shrink:0;color:var(--t2);white-space:nowrap;border-bottom:2px solid transparent;cursor:default}
+.nav-item.a{color:var(--or);border-bottom-color:var(--or)}
+
+/* basic button */
+.bt{background:var(--bg3);border:1px solid var(--bd2);color:var(--t2);padding:4px 10px;border-radius:3px;cursor:pointer;font-size:11px;display:flex;align-items:center;gap:5px;height:26px}
+.bt:hover{background:var(--bg4);color:#d4d4d4}
+.bt:disabled{opacity:.5;cursor:not-allowed}
+
+/* panel */
+.pn{display:flex;flex-direction:column;flex:1;min-width:0;min-height:0;overflow:hidden}
+.ph{background:var(--bg3);border-bottom:1px solid var(--bd);display:flex;align-items:center;flex-shrink:0;height:26px}
+.pt{padding:0 10px;font-size:12px;font-weight:600;flex:1}
+.sub{background:var(--bg2);border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:0 6px;flex-shrink:0;height:26px}
+.pk{padding:0 9px;height:26px;display:flex;align-items:center;font-size:11px;color:var(--t2);border-bottom:2px solid transparent;cursor:pointer;flex-shrink:0}
+.pk:hover{color:#d4d4d4}
+.pk.a{color:#d4d4d4;border-bottom-color:var(--or)}
+
+/* search bar */
+.sb{border-top:1px solid var(--bd);padding:3px 8px;display:flex;align-items:center;gap:8px;background:var(--bg3);flex-shrink:0;color:var(--t2)}
+.sb input{flex:1;background:var(--bg2);border:1px solid var(--bd);color:#d4d4d4;padding:2px 6px;font-size:11px;border-radius:2px;outline:none}
+.sb input:focus{border-color:var(--or)}
+
+/* inspector side tabs */
+.rt{flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:4px;padding:4px 0;color:var(--t2);cursor:pointer;width:100%}
+.rt:hover{color:#d4d4d4}
+.rt.a{color:#d4d4d4;background:var(--bg4)}
+.rt span{writing-mode:vertical-rl;font-size:10px;letter-spacing:.2px;white-space:nowrap}
+
+/* inspector section */
+.isec{border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:7px 10px;font-size:11px;cursor:pointer}
+.isec:hover{background:var(--bg3)}
+.isec b{flex:1;font-weight:400}
+.cnt{background:var(--bg4);color:var(--t2);padding:1px 7px;border-radius:10px;font-size:10px;margin-right:6px}
+
+/* footer links */
+.fb{display:flex;align-items:center;gap:5px;color:var(--t2);font-size:10.5px;padding:2px 6px;border-radius:3px;cursor:pointer}
+.fb:hover{background:var(--bg4);color:#d4d4d4}
+
+/* links */
+a{color:#4a9eff}a:hover{color:#7bb8ff}
+
+/* scrollbar */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-thumb{background:#444;border-radius:3px}
+::-webkit-scrollbar-track{background:transparent}
+
+/* request/response editor */
+.editor-wrap{display:flex;flex:1;overflow:hidden;min-height:0;background:#1a1a1a;position:relative}
+.editor-ln{
+  color:#444;font-family:var(--mono);font-size:11px;line-height:1.65;
+  padding:4px 8px;text-align:right;min-width:34px;user-select:none;
+  flex-shrink:0;white-space:pre;background:#1a1a1a;overflow:hidden;
+  padding-top:4px;border-right:1px solid #2a2a2a
+}
+.editor-ta{
+  flex:1;background:transparent;border:none;outline:none;
+  color:#d4d4d4;font-family:var(--mono);font-size:11px;line-height:1.65;
+  padding:4px 8px;resize:none;white-space:pre;overflow:auto;
+  tab-size:4;word-break:break-all
+}
+.editor-ta::selection{background:#264f78}
+
+/* response code view */
+.code{flex:1;overflow:auto;font-family:var(--mono);font-size:11px;line-height:1.65;padding:4px 0;background:#1a1a1a}
+.cl{display:flex;padding:0 8px;min-height:18px}
+.ln{color:#444;min-width:26px;text-align:right;margin-right:12px;flex-shrink:0;user-select:none}
+.lc{flex:1;word-break:break-all}
+
+/* render tab iframe */
+.render-frame{flex:1;border:none;background:#fff;display:none}
+
+/* loading overlay */
+.loading-overlay{position:absolute;inset:0;background:rgba(26,26,26,.7);display:none;align-items:center;justify-content:center;z-index:10}
+.loading-overlay.show{display:flex}
+.spinner{width:20px;height:20px;border:2px solid #444;border-top-color:var(--or);border-radius:50%;animation:spin .6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* target host input */
+.target-input{
+  background:none;border:none;outline:none;color:#d4d4d4;
+  font-family:var(--mono);font-size:11px;cursor:text;
+  border-bottom:1px solid transparent;
+}
+.target-input:focus{border-bottom-color:var(--or)}
+.target-input:hover{border-bottom-color:var(--bd2)}
+
+/* status indicator */
+.status-dot{width:6px;height:6px;border-radius:50%;background:#4ec94e;flex-shrink:0}
+.status-dot.error{background:#e06c75}
+.status-dot.loading{background:#e5c07b;animation:pulse .8s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+</style>
+</head>
+<body>
+<div class="w" id="app">
+
+  <!-- Window title bar -->
+  <div style="background:#2b2b2b;height:28px;display:flex;align-items:center;padding:0 14px;flex-shrink:0;position:relative;border-bottom:1px solid #1a1a1a">
+    <div style="display:flex;gap:8px">
+      <span style="width:12px;height:12px;border-radius:50%;background:#ff5f57"></span>
+      <span style="width:12px;height:12px;border-radius:50%;background:#febc2e"></span>
+      <span style="width:12px;height:12px;border-radius:50%;background:#28c840"></span>
+    </div>
+    <div style="position:absolute;left:0;right:0;text-align:center;font-size:12px;font-weight:500;color:#9a9a9a;pointer-events:none">Burp Suite Professional v2026.9.2 - Temporary Project - licensed to BSSN</div>
+  </div>
+
+  <!-- Navigation bar -->
+  <div style="background:#1a1a1a;border-bottom:1px solid #111;display:flex;align-items:center;padding:0 8px;height:38px;flex-shrink:0;overflow:hidden">
+    <div class="nav-item">Dashboard</div>
+    <div class="nav-item">Target</div>
+    <div class="nav-item">Proxy</div>
+    <div class="nav-item">Intruder</div>
+    <div class="nav-item a">Repeater</div>
+    <div class="nav-item">Collaborator</div>
+    <div class="nav-item">Sequencer</div>
+    <div class="nav-item">Decoder</div>
+    <div class="nav-item">Comparer</div>
+    <div class="nav-item">Logger</div>
+    <div class="nav-item">Organizer</div>
+    <div class="nav-item">Extensions</div>
+    <div class="nav-item">Discover <span style="display:inline-block;width:5px;height:5px;background:#e05;border-radius:50%;margin-left:4px"></span></div>
+    <div style="flex:1"></div>
+    <div style="display:flex;align-items:center;gap:0;flex-shrink:0">
+      <button class="ib" title="Browser"><svg width="15" height="15" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.1"><circle cx="7" cy="7" r="5.5"/><ellipse cx="7" cy="7" rx="2.5" ry="5.5"/><line x1="1.5" y1="7" x2="12.5" y2="7"/></svg></button>
+      <button class="ib" title="Terminal"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><rect x="1.5" y="2.5" width="13" height="11" rx="2"/><path d="M4.5 6l2.2 2-2.2 2M8.5 10.5h3"/></svg></button>
+      <button class="ib" title="Search"><svg width="15" height="15" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><circle cx="6" cy="6" r="4"/><line x1="9.2" y1="9.2" x2="12.5" y2="12.5"/></svg></button>
+      <button class="ib" title="Settings"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l-.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33h0a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51h0a1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82v0a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg></button>
+      <span style="background:var(--or);color:#fff;padding:3px 8px 3px 6px;border-radius:3px;font-size:10px;font-weight:700;margin-left:4px;display:flex;align-items:center;gap:4px;flex-shrink:0;white-space:nowrap"><svg width="9" height="11" viewBox="0 0 11 14" fill="#fff"><path d="M6.5 0L0 8h5L4.5 14 11 6H6L6.5 0z"/></svg>Burp AT</span>
+    </div>
+  </div>
+
+  <!-- Repeater tab bar -->
+  <div style="background:var(--bg2);border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:0 12px 0 8px;height:34px;gap:2px;flex-shrink:0">
+    <div style="background:var(--bg3);border:1px solid var(--bd2);padding:4px 12px;font-size:11px;border-radius:3px 3px 0 0;display:flex;gap:6px;align-items:center">1 <span style="color:var(--t3)">&#215;</span></div>
+    <button class="ib" style="font-size:16px;padding:0 4px">+</button>
+  </div>
+
+  <!-- Toolbar -->
+  <div style="background:var(--bg2);border-bottom:1px solid var(--bd);padding:5px 10px;display:flex;align-items:center;gap:6px;flex-shrink:0">
+    <button id="send-btn" onclick="sendRequest()" style="background:var(--or);border:none;color:#fff;padding:0 14px;height:26px;border-radius:3px;cursor:pointer;font-size:12px;font-weight:600">Send</button>
+    <button class="bt" style="padding:0 7px" title="Send options"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l-.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33h0a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51h0a1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82v0a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg></button>
+    <button class="bt" id="cancel-btn" onclick="cancelRequest()">Cancel</button>
+    <button class="bt" style="padding:0 6px;gap:3px" title="Previous" onclick="prevHistory()"><svg width="10" height="10" viewBox="0 0 9 10" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 1L2 5l5 4"/></svg><svg width="8" height="8" viewBox="0 0 8 8" fill="currentColor"><path d="M1 2.5h6L4 6z"/></svg></button>
+    <button class="bt" style="padding:0 6px;gap:3px" title="Next" onclick="nextHistory()"><svg width="10" height="10" viewBox="0 0 9 10" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2 1l5 4-5 4"/></svg><svg width="8" height="8" viewBox="0 0 8 8" fill="currentColor"><path d="M1 2.5h6L4 6z"/></svg></button>
+    <button class="bt" id="follow-btn" onclick="followRedirect()" title="Follow redirection">Follow redirection</button>
+    <button onclick="takeScreenshot()" style="background:var(--bg3);border:1px solid var(--bd2);color:var(--t2);padding:0 8px;height:26px;border-radius:3px;cursor:pointer;font-size:11px;display:flex;align-items:center;gap:5px" title="Screenshot (saves PNG)">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
+      SS
+    </button>
+    <button style="background:linear-gradient(135deg,#7c3aed,#a855f7);border:none;color:#fff;padding:0 12px;height:26px;border-radius:3px;cursor:pointer;font-size:11px;font-weight:600;display:flex;align-items:center;gap:5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M9 3l1.8 5.2L16 10l-5.2 1.8L9 17l-1.8-5.2L2 10l5.2-1.8z"/><path d="M18 11l.9 2.6 2.6.9-2.6.9L18 18l-.9-2.6-2.6-.9 2.6-.9z"/><path d="M17.5 2l.6 1.9 1.9.6-1.9.6-.6 1.9-.6-1.9-1.9-.6 1.9-.6z"/></svg>Burp AI</button>
+    <div style="flex:1"></div>
+    <span style="color:var(--t2);font-size:11px">Target:</span>
+    <input id="target-host" class="target-input" value="https://example.com" style="width:220px">
+    <button class="ib" title="Edit target" onclick="document.getElementById('target-host').focus()"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M8 1.5l2.5 2.5-7 7L1 12l.5-2.5 7-8z"/></svg></button>
+    <button class="bt" style="height:22px;padding:0 8px;border-radius:2px">HTTP/1 &#9662;</button>
+    <button class="bt" style="height:22px;padding:0 6px;border-radius:2px">?</button>
+  </div>
+
+  <!-- Main content -->
+  <div style="display:flex;flex:1;overflow:hidden;min-height:0">
+
+    <!-- Request pane -->
+    <div class="pn" style="border-right:1px solid var(--bd)">
+      <div class="ph"><div class="pt">Request</div></div>
+      <div class="sub">
+        <div class="pk a" onclick="setReqTab('pretty',this)">Pretty</div>
+        <div class="pk" onclick="setReqTab('raw',this)">Raw</div>
+        <div class="pk" onclick="setReqTab('hex',this)">Hex</div>
+        <div style="flex:1"></div>
+        <div style="display:flex;align-items:center;gap:2px;color:#888">
+          <button class="ib" title="Word wrap" onclick="toggleWrap('req-ta')"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3.5h12M2 8h9.5a2 2 0 010 4H8"/><path d="M9.5 10.3L8 12l1.5 1.7M2 12.5h3"/></svg></button>
+          <button class="ib" title="Clear request" onclick="clearRequest()"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M2 13h12M5.5 2.5l-1 10M10.5 2.5l1 10M3 5h10"/></svg></button>
+        </div>
+      </div>
+
+      <!-- Request editor (editable) -->
+      <div class="editor-wrap" id="req-editor-wrap">
+        <div class="editor-ln" id="req-ln">1</div>
+        <textarea class="editor-ta" id="req-ta" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off" placeholder="Paste or type your HTTP request here...&#10;&#10;Example:&#10;GET / HTTP/1.1&#10;Host: example.com&#10;"></textarea>
+        <div class="loading-overlay" id="req-loading">
+          <div class="spinner"></div>
+        </div>
+      </div>
+
+      <div class="sb">
+        <span>?</span>
+        <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.2"><circle cx="4.5" cy="4.5" r="3.5"/><line x1="7.5" y1="7.5" x2="10" y2="10"/></svg>
+        <span>&#8592;</span><span>&#8594;</span>
+        <input type="text" placeholder="Search" id="req-search" oninput="searchInPane('req',this.value)">
+        <span id="req-search-info" style="font-size:10px;color:var(--t3)">0 highlights</span>
+      </div>
+    </div>
+
+    <!-- Response pane -->
+    <div class="pn">
+      <div class="ph">
+        <div class="pt">Response</div>
+        <div style="display:flex;gap:2px;padding:0 6px">
+          <button class="ib on" id="layout-v" title="Side by side" onclick="setLayout('v')"><svg width="15" height="13" viewBox="0 0 15 13" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="1" y="1.5" width="13" height="10" rx="1"/><line x1="7.5" y1="1.5" x2="7.5" y2="11.5"/></svg></button>
+          <button class="ib" id="layout-h" title="Stacked" onclick="setLayout('h')"><svg width="15" height="13" viewBox="0 0 15 13" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="1" y="1.5" width="13" height="10" rx="1"/><line x1="1" y1="6.5" x2="14" y2="6.5"/></svg></button>
+          <button class="ib" id="layout-s" title="Single pane" onclick="setLayout('s')"><svg width="15" height="13" viewBox="0 0 15 13" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="1" y="1.5" width="13" height="10" rx="1"/></svg></button>
+        </div>
+      </div>
+      <div class="sub">
+        <div class="pk a" onclick="setRespTab('pretty',this)">Pretty</div>
+        <div class="pk" onclick="setRespTab('raw',this)">Raw</div>
+        <div class="pk" onclick="setRespTab('hex',this)">Hex</div>
+        <div class="pk" onclick="setRespTab('render',this)">Render</div>
+        <div style="flex:1"></div>
+        <div style="display:flex;align-items:center;gap:2px;color:#888">
+          <button class="ib" title="Word wrap" onclick="toggleWrap('resp-wrap')"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3.5h12M2 8h9.5a2 2 0 010 4H8"/><path d="M9.5 10.3L8 12l1.5 1.7M2 12.5h3"/></svg></button>
+          <button class="ib" title="Copy response" onclick="copyResponse()"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="9" height="11" rx="1"/><path d="M3 5H2a1 1 0 00-1 1v8a1 1 0 001 1h8a1 1 0 001-1v-1"/></svg></button>
+        </div>
+      </div>
+
+      <!-- Pretty / Raw / Hex view -->
+      <div class="code" id="resp-code">
+        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--t3);gap:8px">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+          <span style="font-size:11px">Send a request to see the response</span>
+        </div>
+      </div>
+
+      <!-- Render tab iframe -->
+      <iframe id="resp-iframe" class="render-frame" sandbox="allow-same-origin allow-scripts" title="Response render"></iframe>
+
+      <div class="sb">
+        <span>?</span>
+        <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.2"><circle cx="4.5" cy="4.5" r="3.5"/><line x1="7.5" y1="7.5" x2="10" y2="10"/></svg>
+        <span>&#8592;</span><span>&#8594;</span>
+        <input type="text" placeholder="Search" id="resp-search" oninput="searchInPane('resp',this.value)">
+        <span id="resp-search-info" style="font-size:10px;color:var(--t3)">0 highlights</span>
+      </div>
+    </div>
+
+    <!-- Inspector sidebar -->
+    <div style="width:280px;flex-shrink:0;display:flex;flex-direction:column;background:var(--bg2);border-left:1px solid var(--bd)">
+      <div class="ph" style="padding:0 10px;height:26px">
+        <span class="pt" style="padding:0">Inspector</span>
+        <button class="ib" style="padding:2px 4px"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="1" y="1.5" width="10" height="9" rx="1"/><line x1="7" y1="1.5" x2="7" y2="10.5"/></svg></button>
+        <button class="ib" style="padding:2px 4px"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"><path d="M1.5 3h9M1.5 6h9M1.5 9h9"/></svg></button>
+        <button class="ib" style="padding:2px 4px"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"><path d="M1.5 6h9M7 2.5L10.5 6 7 9.5"/></svg></button>
+        <button class="ib" style="padding:2px 4px"><svg width="10" height="10" viewBox="0 0 10 10" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"><path d="M1.5 1.5l7 7M8.5 1.5l-7 7"/></svg></button>
+      </div>
+      <div style="flex:1;overflow:auto" id="inspector-list">
+        <!-- filled dynamically -->
+        <div class="isec"><b>Request attributes</b><span class="cnt">0</span><svg width="8" height="8" viewBox="0 0 8 8" fill="#888"><path d="M2 1l4 3-4 3z"/></svg></div>
+        <div class="isec"><b>Request query parameters</b><span class="cnt">0</span><svg width="8" height="8" viewBox="0 0 8 8" fill="#888"><path d="M2 1l4 3-4 3z"/></svg></div>
+        <div class="isec"><b>Request body parameters</b><span class="cnt">0</span><svg width="8" height="8" viewBox="0 0 8 8" fill="#888"><path d="M2 1l4 3-4 3z"/></svg></div>
+        <div class="isec"><b>Request cookies</b><span class="cnt">0</span><svg width="8" height="8" viewBox="0 0 8 8" fill="#888"><path d="M2 1l4 3-4 3z"/></svg></div>
+        <div class="isec"><b>Request headers</b><span class="cnt">0</span><svg width="8" height="8" viewBox="0 0 8 8" fill="#888"><path d="M2 1l4 3-4 3z"/></svg></div>
+        <div class="isec"><b>Response headers</b><span class="cnt">0</span><svg width="8" height="8" viewBox="0 0 8 8" fill="#888"><path d="M2 1l4 3-4 3z"/></svg></div>
+      </div>
+    </div>
+
+    <!-- Side tabs -->
+    <div style="width:30px;background:var(--bg3);border-left:1px solid var(--bd);display:flex;flex-direction:column;align-items:center;flex-shrink:0;overflow:hidden">
+      <div class="rt a"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><path d="M2 4h12M2 8h12M2 12h12"/><circle cx="5" cy="4" r="1.6" fill="#2d2d2d"/><circle cx="11" cy="8" r="1.6" fill="#2d2d2d"/><circle cx="7" cy="12" r="1.6" fill="#2d2d2d"/></svg><span>Inspector</span></div>
+      <div class="rt"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 1.8h7.5L13 4.3V14.2H3z"/><path d="M5.5 7h5M5.5 9.5h5M5.5 12h3"/></svg><span>Notes</span></div>
+      <div class="rt"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6"/><path d="M6.2 6.3a1.9 1.9 0 113 1.5c-.7.5-1.2.9-1.2 1.7"/><circle cx="8" cy="11.5" r=".5" fill="currentColor"/></svg><span>Explanations</span></div>
+      <div class="rt"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 1.5L3 9h4.5L7 14.5 13 7H8.5z"/></svg><span>Custom actions</span></div>
+      <div style="flex:1;min-height:0"></div>
+      <div class="rt" style="padding:6px 0"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l-.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33h0a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51h0a1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82v0a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg></div>
+    </div>
+
+  </div><!-- end main content -->
+
+  <!-- Status bar -->
+  <div style="background:var(--bg3);border-top:1px solid var(--bd);padding:3px 12px;display:flex;align-items:center;gap:12px;font-size:10px;color:var(--t2);flex-shrink:0">
+    <span id="status-dot" class="status-dot" style="display:none"></span>
+    <span id="status-text" style="color:var(--t2)">Ready</span>
+    <div style="flex:1"></div>
+    <span id="status-info"></span>
+  </div>
+
+  <!-- Footer bar -->
+  <div style="background:#1a1a1a;border-top:1px solid #111;padding:3px 10px;display:flex;align-items:center;gap:6px;flex-shrink:0;height:26px">
+    <div class="fb">Event log</div>
+    <div class="fb">All issues</div>
+    <div style="flex:1"></div>
+    <div class="fb" title="Info"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><circle cx="8" cy="8" r="6.2"/><path d="M8 7.2v4.2"/><circle cx="8" cy="4.9" r=".4" fill="currentColor"/></svg></div>
+    <div class="fb" id="mem-stat">Memory: 0MB</div>
+    <div style="width:60px;height:6px;background:#333;border-radius:2px;overflow:hidden"><div id="mem-bar" style="width:5%;height:100%;background:#4a9eff"></div></div>
+    <div class="fb" style="gap:3px;color:#a78bfa"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M9 3l1.8 5.2L16 10l-5.2 1.8L9 17l-1.8-5.2L2 10l5.2-1.8z"/><path d="M18 11l.9 2.6 2.6.9-2.6.9L18 18l-.9-2.6-2.6-.9 2.6-.9z"/><path d="M17.5 2l.6 1.9 1.9.6-1.9.6-.6 1.9-.6-1.9-1.9-.6 1.9-.6z"/></svg><svg width="8" height="8" viewBox="0 0 8 8" fill="currentColor"><path d="M1 2.5h6L4 6z"/></svg></div>
+  </div>
+
+</div><!-- end .w -->
+
+<script>
+// ─── State ───────────────────────────────────────────────────────────────────
+let lastResponse = null;
+let lastRequest = null;
+let abortController = null;
+let history = [];
+let histIdx = -1;
+let currentRespTab = 'pretty';
+let currentReqTab = 'pretty';
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+const reqTa = document.getElementById('req-ta');
+const reqLn = document.getElementById('req-ln');
+const respCode = document.getElementById('resp-code');
+const respIframe = document.getElementById('resp-iframe');
+
+// Default request
+const DEFAULT_REQUEST = `GET / HTTP/1.1
+Host: example.com
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8
+Accept-Language: en-US,en;q=0.9
+Accept-Encoding: gzip, deflate, br
+Connection: keep-alive
+`;
+
+reqTa.value = DEFAULT_REQUEST;
+syncLineNumbers();
+
+// Update memory stat periodically
+if (performance.memory) {
+  setInterval(() => {
+    const mb = (performance.memory.usedJSHeapSize / 1048576).toFixed(1);
+    document.getElementById('mem-stat').textContent = 'Memory: ' + mb + 'MB';
+    const pct = Math.min(100, (performance.memory.usedJSHeapSize / performance.memory.jsHeapSizeLimit) * 100);
+    document.getElementById('mem-bar').style.width = pct + '%';
+  }, 2000);
+}
+
+// ─── Line number sync ─────────────────────────────────────────────────────────
+reqTa.addEventListener('input', syncLineNumbers);
+reqTa.addEventListener('scroll', () => { reqLn.scrollTop = reqTa.scrollTop; });
+
+function syncLineNumbers() {
+  const lines = reqTa.value.split('\n');
+  reqLn.textContent = Array.from({ length: lines.length }, (_, i) => i + 1).join('\n');
+}
+
+// ─── HTML escape ──────────────────────────────────────────────────────────────
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ─── Syntax highlighting ──────────────────────────────────────────────────────
+function highlightLine(line, lineIndex, isResponse) {
+  if (lineIndex === 0) {
+    if (isResponse) {
+      // "HTTP/1.1 200 OK"
+      const m = line.match(/^(HTTP\/[\d.]+)\s+(\d+)\s*(.*)/);
+      if (m) {
+        const sc = parseInt(m[2]);
+        const c = sc >= 500 ? '#e06c75' : sc >= 400 ? '#e5c07b' : sc >= 300 ? '#d19a66' : sc >= 200 ? '#98c379' : '#d4d4d4';
+        return `<span style="color:#888">${esc(m[1])}</span> <span style="color:${c};font-weight:600">${esc(m[2])}</span> <span style="color:#e5c07b">${esc(m[3])}</span>`;
+      }
+      return `<span style="color:#e5c07b">${esc(line)}</span>`;
+    } else {
+      // "GET /path HTTP/1.1"
+      const m = line.match(/^(\S+)\s+(\S+)\s*(.*)/);
+      if (m) {
+        const methods = { GET:'#61afef', POST:'#e5c07b', PUT:'#c678dd', DELETE:'#e06c75', PATCH:'#98c379', HEAD:'#56b6c2', OPTIONS:'#d19a66' };
+        const mc = methods[m[1]] || '#569cd6';
+        return `<span style="color:${mc};font-weight:600">${esc(m[1])}</span> <span style="color:#d4d4d4">${esc(m[2])}</span> <span style="color:#888">${esc(m[3])}</span>`;
+      }
+      return `<span style="color:#569cd6">${esc(line)}</span>`;
+    }
+  }
+
+  if (line === '') return '';
+
+  const colon = line.indexOf(':');
+  if (colon > 0 && !line.startsWith(' ') && !line.startsWith('\t')) {
+    const key = line.slice(0, colon);
+    const value = line.slice(colon + 1).trimStart();
+    let valueHtml;
+    const kl = key.toLowerCase();
+    if (kl === 'cookie' || kl === 'set-cookie') {
+      valueHtml = `<span style="color:#4ec94e">${esc(value)}</span>`;
+    } else if (kl === 'location' || kl === 'referer' || kl === 'origin') {
+      valueHtml = `<span style="color:#4a9eff">${esc(value)}</span>`;
+    } else if (kl === 'content-type') {
+      valueHtml = `<span style="color:#d19a66">${esc(value)}</span>`;
+    } else {
+      valueHtml = `<span style="color:#d4d4d4">${esc(value)}</span>`;
+    }
+    return `<span style="color:#56b6c2">${esc(key)}:</span> ${valueHtml}`;
+  }
+
+  // Body / other
+  return `<span style="color:#4ec94e">${esc(line)}</span>`;
+}
+
+function renderLines(text, isResponse) {
+  const lines = text.split('\n');
+  // Detect blank line separating headers from body
+  let inBody = false;
+  return lines.map((line, i) => {
+    if (!inBody && line === '') inBody = true;
+    const highlighted = inBody && i > 0 ? `<span style="color:#4ec94e">${esc(line)}</span>` : highlightLine(line, i === 0 ? 0 : (inBody ? 999 : i), isResponse);
+    return `<div class="cl"><span class="ln">${i+1}</span><span class="lc">${highlighted}</span></div>`;
+  }).join('');
+}
+
+// ─── Send request ─────────────────────────────────────────────────────────────
+async function sendRequest() {
+  const request = reqTa.value.trim();
+  const host = document.getElementById('target-host').value.trim();
+
+  if (!request) { setStatus('error', 'No request to send'); return; }
+  if (!host) { setStatus('error', 'No target host set'); return; }
+
+  abortController = new AbortController();
+  document.getElementById('send-btn').disabled = true;
+  document.getElementById('req-loading').classList.add('show');
+  setStatus('loading', 'Sending…');
+
+  try {
+    const res = await fetch('/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ request, host }),
+      signal: abortController.signal
+    });
+
+    const data = await res.json();
+
+    if (data.error) {
+      setStatus('error', 'Error: ' + data.error);
+      showRespError(data.error);
+    } else {
+      lastResponse = data;
+      lastRequest = request;
+
+      // Save to history
+      history.push({ request, host, response: data });
+      histIdx = history.length - 1;
+
+      displayResponse(data);
+      updateInspector(request, data);
+      setStatus('done', `${fmtBytes(data.bytes)} | ${data.millis} ms`);
+
+      // Show follow-redirect button if applicable
+      const sc = data.statusCode;
+      document.getElementById('follow-btn').style.opacity = (sc >= 300 && sc < 400 && data.redirectUrl) ? '1' : '0.5';
+    }
+  } catch (e) {
+    if (e.name !== 'AbortError') {
+      setStatus('error', 'Request failed: ' + e.message);
+      showRespError(e.message);
+    } else {
+      setStatus('done', 'Cancelled');
+    }
+  } finally {
+    document.getElementById('send-btn').disabled = false;
+    document.getElementById('req-loading').classList.remove('show');
+    abortController = null;
+  }
+}
+
+// Keyboard shortcut: Ctrl+Enter or Cmd+Enter to send
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+    e.preventDefault();
+    sendRequest();
+  }
+});
+
+function cancelRequest() {
+  if (abortController) { abortController.abort(); }
+}
+
+// ─── Display response ─────────────────────────────────────────────────────────
+function displayResponse(data) {
+  if (currentRespTab === 'render') {
+    showRenderTab(data.body);
+    return;
+  }
+
+  respIframe.style.display = 'none';
+  respCode.style.display = '';
+
+  if (currentRespTab === 'raw') {
+    // Raw - plain text, no highlighting
+    let html = '';
+    const lines = data.rawResponse.split('\n');
+    lines.forEach((line, i) => {
+      html += `<div class="cl"><span class="ln">${i+1}</span><span class="lc" style="color:#d4d4d4">${esc(line)}</span></div>`;
+    });
+    respCode.innerHTML = html;
+  } else if (currentRespTab === 'hex') {
+    // Hex dump
+    const body = data.rawResponse;
+    let html = '';
+    for (let i = 0; i < Math.min(body.length, 4096); i += 16) {
+      const chunk = body.slice(i, i + 16);
+      const hex = Array.from(chunk).map(c => c.charCodeAt(0).toString(16).padStart(2,'0')).join(' ');
+      const asc = Array.from(chunk).map(c => c.charCodeAt(0) >= 32 && c.charCodeAt(0) < 127 ? c : '.').join('');
+      const addr = i.toString(16).padStart(8, '0');
+      html += `<div class="cl"><span class="ln">${Math.floor(i/16)+1}</span><span class="lc"><span style="color:#56b6c2">${addr}  </span><span style="color:#4ec94e">${hex.padEnd(47)}</span>  <span style="color:#888">${esc(asc)}</span></span></div>`;
+    }
+    if (body.length > 4096) html += `<div class="cl"><span class="ln"></span><span class="lc" style="color:var(--t3)">… (truncated at 4096 bytes)</span></div>`;
+    respCode.innerHTML = html;
+  } else {
+    // Pretty (default)
+    respCode.innerHTML = renderLines(data.rawResponse, true);
+  }
+}
+
+function showRespError(msg) {
+  respCode.style.display = '';
+  respIframe.style.display = 'none';
+  respCode.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:8px">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#e06c75" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    <span style="font-size:11px;color:#e06c75">${esc(msg)}</span>
+  </div>`;
+}
+
+function showRenderTab(html) {
+  respCode.style.display = 'none';
+  respIframe.style.display = 'flex';
+  respIframe.srcdoc = html || '<p style="color:#888;font-family:sans-serif;padding:20px">Empty response body</p>';
+}
+
+// ─── Inspector ────────────────────────────────────────────────────────────────
+function updateInspector(reqText, resp) {
+  const lines = reqText.replace(/\r/g, '').split('\n');
+  const firstLine = (lines[0] || '').split(/\s+/);
+  const method = firstLine[0] || '';
+  const reqPath = firstLine[1] || '/';
+
+  let bodyStart = -1;
+  const reqHeaders = {};
+  for (let i = 1; i < lines.length; i++) {
+    if (lines[i] === '') { bodyStart = i + 1; break; }
+    const c = lines[i].indexOf(':');
+    if (c > 0) {
+      reqHeaders[lines[i].slice(0, c).trim().toLowerCase()] = lines[i].slice(c + 1).trim();
+    }
+  }
+  const body = bodyStart >= 0 ? lines.slice(bodyStart).join('\n') : '';
+
+  // Query params
+  let qCount = 0;
+  try { const u = new URL('http://x' + reqPath); qCount = [...u.searchParams.keys()].length; } catch {}
+
+  // Body params
+  let bCount = 0;
+  const ct = reqHeaders['content-type'] || '';
+  if (body && (ct.includes('x-www-form-urlencoded'))) {
+    bCount = body.split('&').filter(s => s.includes('=')).length;
+  } else if (body && ct.includes('application/json')) {
+    try { const j = JSON.parse(body); bCount = Object.keys(j).length; } catch {}
+  }
+
+  // Cookies
+  const cookieVal = reqHeaders['cookie'] || '';
+  const cCount = cookieVal ? cookieVal.split(';').filter(s => s.trim()).length : 0;
+
+  // Header counts
+  const reqHCount = Object.keys(reqHeaders).length;
+  const respHCount = resp ? Object.keys(resp.headers || {}).length : 0;
+
+  const sections = [
+    ['Request attributes', Math.min(3, method ? 3 : 0)],
+    ['Request query parameters', qCount],
+    ['Request body parameters', bCount],
+    ['Request cookies', cCount],
+    ['Request headers', reqHCount],
+    ['Response headers', respHCount]
+  ];
+
+  document.getElementById('inspector-list').innerHTML = sections.map(([name, count]) => `
+    <div class="isec">
+      <b>${esc(name)}</b>
+      <span class="cnt">${count}</span>
+      <svg width="8" height="8" viewBox="0 0 8 8" fill="#888"><path d="M2 1l4 3-4 3z"/></svg>
+    </div>
+  `).join('');
+}
+
+// ─── Status bar ───────────────────────────────────────────────────────────────
+function setStatus(state, msg) {
+  const dot = document.getElementById('status-dot');
+  const txt = document.getElementById('status-text');
+  const info = document.getElementById('status-info');
+  dot.style.display = 'block';
+
+  if (state === 'done') {
+    dot.className = 'status-dot';
+    txt.style.color = '#d4d4d4';
+    txt.textContent = 'Done';
+    info.textContent = msg;
+  } else if (state === 'error') {
+    dot.className = 'status-dot error';
+    txt.style.color = '#e06c75';
+    txt.textContent = msg;
+    info.textContent = '';
+  } else if (state === 'loading') {
+    dot.className = 'status-dot loading';
+    txt.style.color = '#e5c07b';
+    txt.textContent = msg;
+    info.textContent = '';
+  } else {
+    dot.style.display = 'none';
+    txt.style.color = 'var(--t2)';
+    txt.textContent = msg;
+    info.textContent = '';
+  }
+}
+
+function fmtBytes(n) {
+  if (n < 1024) return n + ' B';
+  if (n < 1048576) return (n / 1024).toFixed(1) + ' KB';
+  return (n / 1048576).toFixed(2) + ' MB';
+}
+
+// ─── Tab switching ─────────────────────────────────────────────────────────────
+function setReqTab(tab, el) {
+  currentReqTab = tab;
+  document.querySelectorAll('#req-editor-wrap').forEach(e => e.closest('.pn').querySelectorAll('.sub .pk').forEach(pk => pk.classList.remove('a')));
+  el.classList.add('a');
+  // Request is always the textarea - just switch display mode for future renders
+}
+
+function setRespTab(tab, el) {
+  currentRespTab = tab;
+  // Remove active from all resp tabs
+  const sub = el.closest('.sub');
+  sub.querySelectorAll('.pk').forEach(pk => pk.classList.remove('a'));
+  el.classList.add('a');
+
+  if (tab === 'render') {
+    if (lastResponse) showRenderTab(lastResponse.body);
+    else { respCode.style.display = ''; respIframe.style.display = 'none'; }
+  } else {
+    if (lastResponse) displayResponse(lastResponse);
+  }
+}
+
+// ─── Layout switching ──────────────────────────────────────────────────────────
+function setLayout(layout) {
+  ['v','h','s'].forEach(l => document.getElementById('layout-'+l).classList.remove('on'));
+  document.getElementById('layout-'+layout).classList.add('on');
+
+  const mainContent = document.querySelector('[style*="display:flex;flex:1;overflow:hidden"]');
+  const reqPane = mainContent.querySelector('.pn:first-child');
+  const respPane = mainContent.querySelector('.pn:last-of-type');
+
+  if (layout === 'v') {
+    mainContent.style.flexDirection = 'row';
+    reqPane.style.display = '';
+  } else if (layout === 'h') {
+    mainContent.style.flexDirection = 'column';
+    reqPane.style.display = '';
+  } else {
+    reqPane.style.display = 'none';
+  }
+}
+
+// ─── Word wrap toggle ──────────────────────────────────────────────────────────
+function toggleWrap(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (el.tagName === 'TEXTAREA') {
+    el.style.whiteSpace = el.style.whiteSpace === 'pre-wrap' ? 'pre' : 'pre-wrap';
+  } else {
+    el.style.whiteSpace = el.style.whiteSpace === 'pre-wrap' ? 'pre' : 'pre-wrap';
+  }
+}
+
+// ─── Copy response ─────────────────────────────────────────────────────────────
+function copyResponse() {
+  if (!lastResponse) return;
+  navigator.clipboard.writeText(lastResponse.rawResponse).then(() => {
+    setStatus('done', 'Response copied to clipboard');
+    setTimeout(() => { if (lastResponse) setStatus('done', fmtBytes(lastResponse.bytes) + ' | ' + lastResponse.millis + ' ms'); }, 2000);
+  });
+}
+
+// ─── Clear request ─────────────────────────────────────────────────────────────
+function clearRequest() {
+  reqTa.value = '';
+  syncLineNumbers();
+}
+
+// ─── Follow redirect ───────────────────────────────────────────────────────────
+async function followRedirect() {
+  if (!lastResponse || !lastResponse.redirectUrl) return;
+  const url = lastResponse.redirectUrl;
+  const host = document.getElementById('target-host').value.trim();
+
+  // Build a GET request to the redirect URL
+  const redirectUrl = url.startsWith('http') ? url : (host + url);
+  const newReq = `GET ${url.startsWith('http') ? new URL(url).pathname + (new URL(url).search || '') : url} HTTP/1.1\nHost: ${url.startsWith('http') ? new URL(url).hostname : new URL(host).hostname}\nUser-Agent: Mozilla/5.0\nAccept: text/html,application/xhtml+xml\nConnection: keep-alive\n`;
+
+  reqTa.value = newReq;
+  syncLineNumbers();
+
+  if (url.startsWith('http')) {
+    try { document.getElementById('target-host').value = new URL(url).origin; } catch {}
+  }
+
+  sendRequest();
+}
+
+// ─── History navigation ────────────────────────────────────────────────────────
+function prevHistory() {
+  if (histIdx > 0) {
+    histIdx--;
+    const h = history[histIdx];
+    reqTa.value = h.request;
+    document.getElementById('target-host').value = h.host;
+    syncLineNumbers();
+    if (h.response) { lastResponse = h.response; displayResponse(h.response); updateInspector(h.request, h.response); }
+  }
+}
+
+function nextHistory() {
+  if (histIdx < history.length - 1) {
+    histIdx++;
+    const h = history[histIdx];
+    reqTa.value = h.request;
+    document.getElementById('target-host').value = h.host;
+    syncLineNumbers();
+    if (h.response) { lastResponse = h.response; displayResponse(h.response); updateInspector(h.request, h.response); }
+  }
+}
+
+// ─── Search ───────────────────────────────────────────────────────────────────
+function searchInPane(pane, query) {
+  const infoEl = document.getElementById(pane + '-search-info');
+  // Simple search highlight - count occurrences
+  if (!query) { infoEl.textContent = '0 highlights'; return; }
+  const source = pane === 'req' ? reqTa.value : (lastResponse ? lastResponse.rawResponse : '');
+  const count = (source.match(new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi')) || []).length;
+  infoEl.textContent = count + (count === 1 ? ' highlight' : ' highlights');
+}
+
+// ─── Screenshot ───────────────────────────────────────────────────────────────
+async function takeScreenshot() {
+  const btn = document.querySelector('[title="Screenshot (saves PNG)"]');
+  const origHTML = btn.innerHTML;
+  btn.innerHTML = '<div class="spinner" style="width:12px;height:12px;border-width:1.5px"></div>';
+  btn.disabled = true;
+
+  try {
+    const el = document.getElementById('app');
+    const canvas = await html2canvas(el, {
+      backgroundColor: '#1e1e1e',
+      scale: 2,
+      useCORS: true,
+      logging: false,
+      allowTaint: true
+    });
+
+    const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    const filename = `burpshot-${ts}.png`;
+    const dataUrl = canvas.toDataURL('image/png');
+
+    // Save to server (avoids browser download block)
+    const res = await fetch('/save-screenshot', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ data: dataUrl, filename })
+    });
+    const result = await res.json();
+
+    if (result.saved) {
+      setStatus('done', `📸 Screenshot saved: screenshots/${filename}`);
+    } else {
+      setStatus('error', 'Screenshot error: ' + (result.error || 'unknown'));
+    }
+  } catch (e) {
+    setStatus('error', 'Screenshot failed: ' + e.message);
+  } finally {
+    btn.innerHTML = origHTML;
+    btn.disabled = false;
+    setTimeout(() => {
+      if (lastResponse) setStatus('done', fmtBytes(lastResponse.bytes) + ' | ' + lastResponse.millis + ' ms');
+      else setStatus('', 'Ready');
+    }, 3000);
+  }
+}
+
+// ─── Target host: update from request Host header ──────────────────────────────
+reqTa.addEventListener('blur', () => {
+  const lines = reqTa.value.split('\n');
+  for (const line of lines) {
+    const m = line.match(/^[Hh]ost:\s*(.+)/);
+    if (m) {
+      const host = m[1].trim();
+      const targetInput = document.getElementById('target-host');
+      // Only update protocol part - keep current protocol
+      const proto = targetInput.value.startsWith('https') ? 'https' : 'http';
+      if (!host.startsWith('http')) {
+        targetInput.value = proto + '://' + host;
+      }
+      break;
+    }
+  }
+});
+</script>
+</body>
+</html>

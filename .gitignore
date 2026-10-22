@@ -1,0 +1,6 @@
+screenshots/
+design_ref/
+node_modules/
+__pycache__/
+*.pyc
+.DS_Store
